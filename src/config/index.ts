@@ -15,11 +15,10 @@ export const config = {
   jwtExpiresIn: (process.env.JWT_EXPIRES_IN || '7d') as string | number,
 
   // Email
-  smtp: {
-    host: process.env.SMTP_HOST || 'smtp.gmail.com',
-    port: parseInt(process.env.SMTP_PORT || '587', 10),
-    user: process.env.SMTP_USER || '',
-    pass: process.env.SMTP_PASS || '',
-  },
+  smtpHost: process.env.SMTP_HOST || 'smtp.gmail.com',
+  smtpPort: parseInt(process.env.SMTP_PORT || '587', 10),
+  smtpUser: process.env.SMTP_USER || '',
+  smtpPass: process.env.SMTP_PASS || '',
   emailFrom: process.env.EMAIL_FROM || 'noreply@dairyfarm.com',
+  emailFromName: process.env.EMAIL_FROM_NAME || 'Dairy Farm Management',
 };

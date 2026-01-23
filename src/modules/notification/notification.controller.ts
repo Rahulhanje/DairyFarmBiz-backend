@@ -1,0 +1,196 @@
+import { Request, Response } from 'express';
+import { notificationService } from './notification.service';
+import { emailService } from './email.service';
+import { asyncHandler } from '../../utils/asyncHandler';
+import { sendSuccess, sendCreated, sendPaginated, sendNoContent } from '../../utils/responseHandler';
+import { NotificationStatus, NotificationType, NotificationChannel } from './notification.model';
+
+/**
+ * @desc    Create a new notification
+ * @route   POST /api/v1/notifications
+ * @access  Private
+ */
+export const createNotification = asyncHandler(async (req: Request, res: Response) => {
+  const {
+    animalId,
+    inseminationId,
+    type,
+    channel,
+    scheduledDate,
+    message,
+    subject,
+    recipientEmail,
+    recipientPhone,
+  } = req.body;
+
+  const notification = await notificationService.create({
+    animalId,
+    inseminationId,
+    type,
+    channel,
+    scheduledDate: new Date(scheduledDate),
+    message,
+    subject,
+    recipientEmail,
+    recipientPhone,
+  });
+
+  sendCreated(res, notification, 'Notification created successfully');
+});
+
+/**
+ * @desc    Get notification by ID
+ * @route   GET /api/v1/notifications/:id
+ * @access  Private
+ */
+export const getNotificationById = asyncHandler(async (req: Request, res: Response) => {
+  const notification = await notificationService.getById(req.params.id);
+  sendSuccess(res, notification, 'Notification fetched successfully');
+});
+
+/**
+ * @desc    Update a notification
+ * @route   PUT /api/v1/notifications/:id
+ * @access  Private
+ */
+export const updateNotification = asyncHandler(async (req: Request, res: Response) => {
+  const { scheduledDate, message, subject, recipientEmail, recipientPhone, status } = req.body;
+
+  const notification = await notificationService.update(req.params.id, {
+    scheduledDate: scheduledDate ? new Date(scheduledDate) : undefined,
+    message,
+    subject,
+    recipientEmail,
+    recipientPhone,
+    status,
+  });
+
+  sendSuccess(res, notification, 'Notification updated successfully');
+});
+
+/**
+ * @desc    Cancel a notification
+ * @route   PATCH /api/v1/notifications/:id/cancel
+ * @access  Private
+ */
+export const cancelNotification = asyncHandler(async (req: Request, res: Response) => {
+  const notification = await notificationService.cancel(req.params.id);
+  sendSuccess(res, notification, 'Notification cancelled successfully');
+});
+
+/**
+ * @desc    Delete a notification
+ * @route   DELETE /api/v1/notifications/:id
+ * @access  Private
+ */
+export const deleteNotification = asyncHandler(async (req: Request, res: Response) => {
+  await notificationService.delete(req.params.id);
+  sendNoContent(res);
+});
+
+/**
+ * @desc    Get all notifications with filters
+ * @route   GET /api/v1/notifications
+ * @access  Private
+ */
+export const getAllNotifications = asyncHandler(async (req: Request, res: Response) => {
+  const page = parseInt(req.query.page as string) || 1;
+  const limit = parseInt(req.query.limit as string) || 10;
+  const status = req.query.status as NotificationStatus | undefined;
+  const type = req.query.type as NotificationType | undefined;
+  const channel = req.query.channel as NotificationChannel | undefined;
+  const animalId = req.query.animalId as string | undefined;
+  const inseminationId = req.query.inseminationId as string | undefined;
+  const startDate = req.query.startDate ? new Date(req.query.startDate as string) : undefined;
+  const endDate = req.query.endDate ? new Date(req.query.endDate as string) : undefined;
+
+  const { notifications, total } = await notificationService.getAll(
+    { status, type, channel, animalId, inseminationId, startDate, endDate },
+    page,
+    limit
+  );
+
+  sendPaginated(res, notifications, { page, limit, total }, 'Notifications fetched successfully');
+});
+
+/**
+ * @desc    Send a notification immediately
+ * @route   POST /api/v1/notifications/:id/send
+ * @access  Private
+ */
+export const sendNotification = asyncHandler(async (req: Request, res: Response) => {
+  const result = await notificationService.sendEmailNotification(req.params.id);
+
+  if (result.success) {
+    sendSuccess(res, { sent: true }, 'Notification sent successfully');
+  } else {
+    sendSuccess(res, { sent: false, error: result.error }, 'Failed to send notification');
+  }
+});
+
+/**
+ * @desc    Process all pending due notifications
+ * @route   POST /api/v1/notifications/process-pending
+ * @access  Private
+ */
+export const processPendingNotifications = asyncHandler(async (_req: Request, res: Response) => {
+  const result = await notificationService.processPendingNotifications();
+  sendSuccess(res, result, 'Pending notifications processed');
+});
+
+/**
+ * @desc    Create pregnancy check reminder notifications
+ * @route   POST /api/v1/notifications/pregnancy-reminders
+ * @access  Private
+ */
+export const createPregnancyReminders = asyncHandler(async (req: Request, res: Response) => {
+  const { recipientEmail } = req.body;
+  const created = await notificationService.createPregnancyCheckReminders(recipientEmail);
+  sendSuccess(res, { created }, `Created ${created} pregnancy check reminder(s)`);
+});
+
+/**
+ * @desc    Get notification statistics
+ * @route   GET /api/v1/notifications/statistics
+ * @access  Private
+ */
+export const getStatistics = asyncHandler(async (_req: Request, res: Response) => {
+  const statistics = await notificationService.getStatistics();
+  sendSuccess(res, statistics, 'Notification statistics fetched successfully');
+});
+
+/**
+ * @desc    Check email service status
+ * @route   GET /api/v1/notifications/email-status
+ * @access  Private
+ */
+export const getEmailStatus = asyncHandler(async (_req: Request, res: Response) => {
+  const isReady = emailService.isReady();
+  const isConnected = isReady ? await emailService.verifyConnection() : false;
+
+  sendSuccess(res, {
+    configured: isReady,
+    connected: isConnected,
+  }, 'Email service status fetched');
+});
+
+/**
+ * @desc    Send a test email
+ * @route   POST /api/v1/notifications/test-email
+ * @access  Private
+ */
+export const sendTestEmail = asyncHandler(async (req: Request, res: Response) => {
+  const { to, subject, message } = req.body;
+
+  const result = await emailService.sendGeneralNotification(
+    to,
+    subject || 'Test Email from Dairy Farm Management',
+    message || 'This is a test email to verify email configuration.'
+  );
+
+  if (result.success) {
+    sendSuccess(res, { sent: true, messageId: result.messageId }, 'Test email sent successfully');
+  } else {
+    sendSuccess(res, { sent: false, error: result.error }, 'Failed to send test email');
+  }
+});

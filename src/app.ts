@@ -8,6 +8,7 @@ import { milkCollectionRoutes } from './modules/milk-collection';
 import { expenseRoutes } from './modules/expense';
 import { breedingRoutes } from './modules/breeding';
 import { pregnancyStatusRoutes } from './modules/pregnancy-status';
+import { notificationRoutes } from './modules/notification';
 
 const app: Application = express();
 
@@ -33,6 +34,7 @@ app.use('/api/v1/milk-collection', milkCollectionRoutes);
 app.use('/api/v1/expenses', expenseRoutes);
 app.use('/api/v1/breeding', breedingRoutes);
 app.use('/api/v1/pregnancy-status', pregnancyStatusRoutes);
+app.use('/api/v1/notifications', notificationRoutes);
 // app.use('/api/v1/dashboard', dashboardRoutes);
 
 // 404 Handler

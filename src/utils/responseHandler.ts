@@ -63,3 +63,7 @@ export const sendPaginated = <T>(
     },
   });
 };
+
+export const sendNoContent = (res: Response): Response => {
+  return res.status(204).send();
+};
