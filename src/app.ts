@@ -6,6 +6,7 @@ import { animalRoutes } from './modules/animal';
 import { milkRateRoutes } from './modules/milk-rate';
 import { milkCollectionRoutes } from './modules/milk-collection';
 import { expenseRoutes } from './modules/expense';
+import { breedingRoutes } from './modules/breeding';
 
 const app: Application = express();
 
@@ -29,7 +30,7 @@ app.use('/api/v1/animals', animalRoutes);
 app.use('/api/v1/milk-rates', milkRateRoutes);
 app.use('/api/v1/milk-collection', milkCollectionRoutes);
 app.use('/api/v1/expenses', expenseRoutes);
-// app.use('/api/v1/breeding', breedingRoutes);
+app.use('/api/v1/breeding', breedingRoutes);
 // app.use('/api/v1/dashboard', dashboardRoutes);
 
 // 404 Handler
