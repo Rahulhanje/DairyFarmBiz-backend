@@ -1,11 +1,15 @@
 import app from './app';
 import { config } from './config';
 import { connectDB } from './config/db';
+import { cronJobService } from './utils/cronJobs';
 
 const startServer = async (): Promise<void> => {
   try {
     // Connect to MongoDB
     await connectDB();
+
+    // Initialize cron jobs
+    cronJobService.initialize();
 
     // Start Express server
     app.listen(config.port, () => {

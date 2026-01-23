@@ -12,6 +12,8 @@ import {
   getStatistics,
   getEmailStatus,
   sendTestEmail,
+  getCronStatus,
+  runCronManually,
 } from './notification.controller';
 import {
   createNotificationValidation,
@@ -31,9 +33,11 @@ router.use(authenticate);
 // Special routes (before dynamic routes)
 router.get('/statistics', getStatistics);
 router.get('/email-status', getEmailStatus);
+router.get('/cron-status', getCronStatus);
 router.post('/test-email', validate(sendTestEmailValidation), sendTestEmail);
 router.post('/process-pending', processPendingNotifications);
 router.post('/pregnancy-reminders', createPregnancyReminders);
+router.post('/run-cron', runCronManually);
 
 // CRUD routes
 router.post('/', validate(createNotificationValidation), createNotification);

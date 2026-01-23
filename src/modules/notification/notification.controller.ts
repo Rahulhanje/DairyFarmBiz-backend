@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { notificationService } from './notification.service';
 import { emailService } from './email.service';
+import { cronJobService } from '../../utils/cronJobs';
 import { asyncHandler } from '../../utils/asyncHandler';
 import { sendSuccess, sendCreated, sendPaginated, sendNoContent } from '../../utils/responseHandler';
 import { NotificationStatus, NotificationType, NotificationChannel } from './notification.model';
@@ -193,4 +194,24 @@ export const sendTestEmail = asyncHandler(async (req: Request, res: Response) =>
   } else {
     sendSuccess(res, { sent: false, error: result.error }, 'Failed to send test email');
   }
+});
+
+/**
+ * @desc    Get cron job status
+ * @route   GET /api/v1/notifications/cron-status
+ * @access  Private
+ */
+export const getCronStatus = asyncHandler(async (_req: Request, res: Response) => {
+  const status = cronJobService.getStatus();
+  sendSuccess(res, status, 'Cron job status fetched');
+});
+
+/**
+ * @desc    Run cron job manually
+ * @route   POST /api/v1/notifications/run-cron
+ * @access  Private
+ */
+export const runCronManually = asyncHandler(async (_req: Request, res: Response) => {
+  const result = await cronJobService.runDailyNotificationJob();
+  sendSuccess(res, result, 'Cron job executed successfully');
 });
