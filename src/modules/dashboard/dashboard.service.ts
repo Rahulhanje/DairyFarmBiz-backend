@@ -134,9 +134,9 @@ class DashboardService {
         {
           $group: {
             _id: null,
-            totalQuantity: { $sum: '$quantity' },
+            totalQuantity: { $sum: '$totalMilk' },
             totalAmount: { $sum: '$totalAmount' },
-            avgRate: { $avg: '$ratePerLiter' },
+            avgRate: { $avg: '$rateApplied' },
           },
         },
       ]),
@@ -147,7 +147,7 @@ class DashboardService {
         {
           $group: {
             _id: '$session',
-            quantity: { $sum: '$quantity' },
+            quantity: { $sum: '$totalMilk' },
             amount: { $sum: '$totalAmount' },
           },
         },
@@ -439,7 +439,7 @@ class DashboardService {
             ...groupBy,
             animalType: '$animalType',
           },
-          quantity: { $sum: '$quantity' },
+          quantity: { $sum: '$totalMilk' },
           amount: { $sum: '$totalAmount' },
         },
       },

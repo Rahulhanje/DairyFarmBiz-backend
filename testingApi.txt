@@ -1,0 +1,1249 @@
+================================================================================
+                    DAIRY FARM MANAGEMENT SYSTEM - API TESTING GUIDE
+                              Complete Postman Testing Reference
+================================================================================
+
+Base URL: http://localhost:5000/api/v1
+
+NOTE: 
+- Replace {{token}} with actual JWT token received from login
+- Replace {{id}} with actual MongoDB ObjectId from responses
+- All protected routes need Header: Authorization: Bearer {{token}}
+
+================================================================================
+                                 0. HEALTH CHECK
+================================================================================
+
+Title: Health Check
+Desc: Verify API is running
+Method: GET
+URL: http://localhost:5000/health
+Body: None
+
+================================================================================
+                                 1. AUTH MODULE
+================================================================================
+
+--------------------------------------------------------------------------------
+1.1 Signup
+--------------------------------------------------------------------------------
+Title: Register New User
+Desc: Create a new user account
+Method: POST
+URL: http://localhost:5000/api/v1/auth/signup
+Headers: Content-Type: application/json
+Body:
+{
+  "name": "Farm Admin",
+  "email": "admin@dairyfarm.com",
+  "password": "admin123",
+  "role": "admin"
+}
+
+--------------------------------------------------------------------------------
+1.2 Login
+--------------------------------------------------------------------------------
+Title: User Login
+Desc: Authenticate and get JWT token
+Method: POST
+URL: http://localhost:5000/api/v1/auth/login
+Headers: Content-Type: application/json
+Body:
+{
+  "email": "admin@dairyfarm.com",
+  "password": "Admin123"
+}
+
+>>> SAVE THE TOKEN FROM RESPONSE FOR ALL SUBSEQUENT REQUESTS <<<
+
+--------------------------------------------------------------------------------
+1.3 Get Current User
+--------------------------------------------------------------------------------
+Title: Get My Profile
+Desc: Get logged-in user details
+Method: GET
+URL: http://localhost:5000/api/v1/auth/me
+Headers: 
+  Content-Type: application/json
+  Authorization: Bearer {{token}}
+Body: None
+
+================================================================================
+                                 2. ANIMAL MODULE
+================================================================================
+
+--------------------------------------------------------------------------------
+2.1 Create Cow
+--------------------------------------------------------------------------------
+Title: Create Cow
+Desc: Add a new cow to the farm
+Method: POST
+URL: http://localhost:5000/api/v1/animals
+Headers: 
+  Content-Type: application/json
+  Authorization: Bearer {{token}}
+Body:
+{
+  "serialNumber": "COW001",
+  "animalType": "cow",
+  "nickName": "Lakshmi",
+  "breed": "Holstein",
+  "gender": "female",
+  "dateOfBirth": "2022-01-15",
+  "purchaseDate": "2023-06-01",
+  "purchasePrice": 50000,
+  "notes": "Healthy cow, good milk producer"
+}
+
+--------------------------------------------------------------------------------
+2.2 Create Buffalo
+--------------------------------------------------------------------------------
+Title: Create Buffalo
+Desc: Add a new buffalo to the farm
+Method: POST
+URL: http://localhost:5000/api/v1/animals
+Headers: 
+  Content-Type: application/json
+  Authorization: Bearer {{token}}
+Body:
+{
+  "serialNumber": "BUF001",
+  "animalType": "buffalo",
+  "nickName": "Kali",
+  "breed": "Murrah",
+  "gender": "female",
+  "dateOfBirth": "2021-06-20",
+  "purchaseDate": "2023-03-15",
+  "purchasePrice": 75000,
+  "notes": "High fat content milk"
+}
+
+--------------------------------------------------------------------------------
+2.3 Create Another Cow
+--------------------------------------------------------------------------------
+Title: Create Second Cow
+Desc: Add another cow for testing
+Method: POST
+URL: http://localhost:5000/api/v1/animals
+Headers: 
+  Content-Type: application/json
+  Authorization: Bearer {{token}}
+Body:
+{
+  "serialNumber": "COW002",
+  "animalType": "cow",
+  "nickName": "Ganga",
+  "breed": "Jersey",
+  "gender": "female",
+  "dateOfBirth": "2023-03-10",
+  "purchaseDate": "2024-01-10",
+  "purchasePrice": 45000
+}
+
+--------------------------------------------------------------------------------
+2.4 Get All Animals
+--------------------------------------------------------------------------------
+Title: List All Animals
+Desc: Get all animals with pagination
+Method: GET
+URL: http://localhost:5000/api/v1/animals
+Headers: Authorization: Bearer {{token}}
+Body: None
+
+--------------------------------------------------------------------------------
+2.5 Get Animals with Filters
+--------------------------------------------------------------------------------
+Title: Filter Animals
+Desc: Get animals with query filters
+Method: GET
+URL: http://localhost:5000/api/v1/animals?animalType=cow&gender=female&isActive=true&page=1&limit=10
+Headers: Authorization: Bearer {{token}}
+Body: None
+
+--------------------------------------------------------------------------------
+2.6 Get Animal by ID
+--------------------------------------------------------------------------------
+Title: Get Single Animal
+Desc: Get animal details by ID
+Method: GET
+URL: http://localhost:5000/api/v1/animals/{{animalId}}
+Headers: Authorization: Bearer {{token}}
+Body: None
+
+--------------------------------------------------------------------------------
+2.7 Update Animal
+--------------------------------------------------------------------------------
+Title: Update Animal
+Desc: Update animal details
+Method: PUT
+URL: http://localhost:5000/api/v1/animals/{{animalId}}
+Headers: 
+  Content-Type: application/json
+  Authorization: Bearer {{token}}
+Body:
+{
+  "nickName": "Lakshmi Updated",
+  "notes": "Updated notes - excellent milk producer"
+}
+
+--------------------------------------------------------------------------------
+2.8 Sell Animal
+--------------------------------------------------------------------------------
+Title: Sell Animal
+Desc: Mark animal as sold
+Method: PATCH
+URL: http://localhost:5000/api/v1/animals/{{animalId}}/sell
+Headers: 
+  Content-Type: application/json
+  Authorization: Bearer {{token}}
+Body:
+{
+  "sellingDate": "2026-01-20",
+  "sellingPrice": 55000,
+  "sellingReason": "Old age"
+}
+
+--------------------------------------------------------------------------------
+2.9 Delete Animal
+--------------------------------------------------------------------------------
+Title: Delete Animal
+Desc: Soft delete an animal
+Method: DELETE
+URL: http://localhost:5000/api/v1/animals/{{animalId}}
+Headers: Authorization: Bearer {{token}}
+Body: None
+
+================================================================================
+                              3. MILK RATE MODULE
+================================================================================
+
+--------------------------------------------------------------------------------
+3.1 Create Cow Milk Rate
+--------------------------------------------------------------------------------
+Title: Create Cow Rate
+Desc: Set milk rate for cows
+Method: POST
+URL: http://localhost:5000/api/v1/milk-rates
+Headers: 
+  Content-Type: application/json
+  Authorization: Bearer {{token}}
+Body:
+{
+  "animalType": "cow",
+  "ratePerLiter": 55,
+  "effectiveFrom": "2026-01-01"
+}
+
+--------------------------------------------------------------------------------
+3.2 Create Buffalo Milk Rate
+--------------------------------------------------------------------------------
+Title: Create Buffalo Rate
+Desc: Set milk rate for buffaloes
+Method: POST
+URL: http://localhost:5000/api/v1/milk-rates
+Headers: 
+  Content-Type: application/json
+  Authorization: Bearer {{token}}
+Body:
+{
+  "animalType": "buffalo",
+  "ratePerLiter": 70,
+  "effectiveFrom": "2026-01-01"
+}
+
+--------------------------------------------------------------------------------
+3.3 Get All Milk Rates
+--------------------------------------------------------------------------------
+Title: List All Rates
+Desc: Get all milk rates
+Method: GET
+URL: http://localhost:5000/api/v1/milk-rates
+Headers: Authorization: Bearer {{token}}
+Body: None
+
+--------------------------------------------------------------------------------
+3.4 Get Current Rates
+--------------------------------------------------------------------------------
+Title: Get Current Rates
+Desc: Get currently active rates for cow and buffalo
+Method: GET
+URL: http://localhost:5000/api/v1/milk-rates/current
+Headers: Authorization: Bearer {{token}}
+Body: None
+
+--------------------------------------------------------------------------------
+3.5 Rate Lookup by Date
+--------------------------------------------------------------------------------
+Title: Lookup Rate
+Desc: Get rate applicable for a specific date
+Method: GET
+URL: http://localhost:5000/api/v1/milk-rates/lookup?animalType=cow&date=2026-01-15
+Headers: Authorization: Bearer {{token}}
+Body: None
+
+--------------------------------------------------------------------------------
+3.6 Get Rate by ID
+--------------------------------------------------------------------------------
+Title: Get Rate by ID
+Desc: Get specific rate details
+Method: GET
+URL: http://localhost:5000/api/v1/milk-rates/{{rateId}}
+Headers: Authorization: Bearer {{token}}
+Body: None
+
+================================================================================
+                            4. MILK COLLECTION MODULE
+================================================================================
+
+--------------------------------------------------------------------------------
+4.1 Create Morning Cow Collection
+--------------------------------------------------------------------------------
+Title: Morning Cow Milk
+Desc: Record morning cow milk collection
+Method: POST
+URL: http://localhost:5000/api/v1/milk-collection
+Headers: 
+  Content-Type: application/json
+  Authorization: Bearer {{token}}
+Body:
+{
+  "date": "2026-01-23",
+  "session": "morning",
+  "animalType": "cow",
+  "totalMilk": 50
+}
+
+--------------------------------------------------------------------------------
+4.2 Create Evening Cow Collection
+--------------------------------------------------------------------------------
+Title: Evening Cow Milk
+Desc: Record evening cow milk collection
+Method: POST
+URL: http://localhost:5000/api/v1/milk-collection
+Headers: 
+  Content-Type: application/json
+  Authorization: Bearer {{token}}
+Body:
+{
+  "date": "2026-01-23",
+  "session": "evening",
+  "animalType": "cow",
+  "totalMilk": 45
+}
+
+--------------------------------------------------------------------------------
+4.3 Create Morning Buffalo Collection
+--------------------------------------------------------------------------------
+Title: Morning Buffalo Milk
+Desc: Record morning buffalo milk collection
+Method: POST
+URL: http://localhost:5000/api/v1/milk-collection
+Headers: 
+  Content-Type: application/json
+  Authorization: Bearer {{token}}
+Body:
+{
+  "date": "2026-01-23",
+  "session": "morning",
+  "animalType": "buffalo",
+  "totalMilk": 30
+}
+
+--------------------------------------------------------------------------------
+4.4 Create Evening Buffalo Collection
+--------------------------------------------------------------------------------
+Title: Evening Buffalo Milk
+Desc: Record evening buffalo milk collection
+Method: POST
+URL: http://localhost:5000/api/v1/milk-collection
+Headers: 
+  Content-Type: application/json
+  Authorization: Bearer {{token}}
+Body:
+{
+  "date": "2026-01-23",
+  "session": "evening",
+  "animalType": "buffalo",
+  "totalMilk": 25
+}
+
+--------------------------------------------------------------------------------
+4.5 Get All Collections
+--------------------------------------------------------------------------------
+Title: List All Collections
+Desc: Get all milk collection entries
+Method: GET
+URL: http://localhost:5000/api/v1/milk-collection
+Headers: Authorization: Bearer {{token}}
+Body: None
+
+--------------------------------------------------------------------------------
+4.6 Get Collections with Filters
+--------------------------------------------------------------------------------
+Title: Filter Collections
+Desc: Get collections with date range and filters
+Method: GET
+URL: http://localhost:5000/api/v1/milk-collection?animalType=cow&session=morning&startDate=2026-01-01&endDate=2026-01-31&page=1&limit=10
+Headers: Authorization: Bearer {{token}}
+Body: None
+
+--------------------------------------------------------------------------------
+4.7 Get Daily Summary
+--------------------------------------------------------------------------------
+Title: Daily Summary
+Desc: Get aggregated milk collection summary for a specific date
+Method: GET
+URL: http://localhost:5000/api/v1/milk-collection/daily-summary?date=2026-01-23
+Headers: Authorization: Bearer {{token}}
+Body: None
+
+--------------------------------------------------------------------------------
+4.8 Get Collections by Date
+--------------------------------------------------------------------------------
+Title: Get by Date
+Desc: Get all milk collection entries for a specific date
+Method: GET
+URL: http://localhost:5000/api/v1/milk-collection/by-date?date=2026-01-23
+Headers: Authorization: Bearer {{token}}
+Body: None
+
+--------------------------------------------------------------------------------
+4.9 Get Collection by ID
+--------------------------------------------------------------------------------
+Title: Get Collection by ID
+Desc: Get specific collection entry
+Method: GET
+URL: http://localhost:5000/api/v1/milk-collection/{{collectionId}}
+Headers: Authorization: Bearer {{token}}
+Body: None
+
+--------------------------------------------------------------------------------
+4.10 Update Collection
+--------------------------------------------------------------------------------
+Title: Update Collection
+Desc: Update milk collection entry
+Method: PUT
+URL: http://localhost:5000/api/v1/milk-collection/{{collectionId}}
+Headers: 
+  Content-Type: application/json
+  Authorization: Bearer {{token}}
+Body:
+{
+  "totalMilk": 55
+}
+
+--------------------------------------------------------------------------------
+4.11 Delete Collection
+--------------------------------------------------------------------------------
+Title: Delete Collection
+Desc: Delete milk collection entry
+Method: DELETE
+URL: http://localhost:5000/api/v1/milk-collection/{{collectionId}}
+Headers: Authorization: Bearer {{token}}
+Body: None
+
+================================================================================
+                              5. EXPENSE MODULE
+================================================================================
+
+--------------------------------------------------------------------------------
+5.1 Create Feed Expense
+--------------------------------------------------------------------------------
+Title: Add Feed Expense
+Desc: Record feed purchase expense
+Method: POST
+URL: http://localhost:5000/api/v1/expenses
+Headers: 
+  Content-Type: application/json
+  Authorization: Bearer {{token}} 697394a81ff7108425e328a2
+Body:
+{
+  "name": "Purchased cattle feed - 10 bags",
+  "category": "feed",
+  "amount": 15000,
+  "date": "2026-01-20"
+}
+
+--------------------------------------------------------------------------------
+5.2 Create Medicine Expense
+--------------------------------------------------------------------------------
+Title: Add Medicine Expense
+Desc: Record medicine expense
+Method: POST
+URL: http://localhost:5000/api/v1/expenses
+Headers: 
+  Content-Type: application/json
+  Authorization: Bearer {{token}}
+Body:
+{
+  "name": "Vaccination and deworming",
+  "category": "medicine",
+  "amount": 3500,
+  "date": "2026-01-18"
+}
+
+--------------------------------------------------------------------------------
+5.3 Create Labor Expense
+--------------------------------------------------------------------------------
+Title: Add Labor Expense
+Desc: Record labor/salary expense
+Method: POST
+URL: http://localhost:5000/api/v1/expenses
+Headers: 
+  Content-Type: application/json
+  Authorization: Bearer {{token}}
+Body:
+{
+  "name": "Monthly worker salary",
+  "category": "labor",
+  "amount": 12000,
+  "date": "2026-01-01"
+}
+
+--------------------------------------------------------------------------------
+5.4 Create Equipment Expense
+--------------------------------------------------------------------------------
+Title: Add Equipment Expense
+Desc: Record equipment expense
+Method: POST
+URL: http://localhost:5000/api/v1/expenses
+Headers: 
+  Content-Type: application/json
+  Authorization: Bearer {{token}}
+Body:
+{
+  "name": "New milking bucket and containers",
+  "category": "equipment",
+  "amount": 8000,
+  "date": "2026-01-15"
+}
+
+--------------------------------------------------------------------------------
+5.5 Create Maintenance Expense
+--------------------------------------------------------------------------------
+Title: Add Maintenance Expense
+Desc: Record maintenance expense
+Method: POST
+URL: http://localhost:5000/api/v1/expenses
+Headers: 
+  Content-Type: application/json
+  Authorization: Bearer {{token}}
+Body:
+{
+  "name": "Shed repair work",
+  "category": "maintenance",
+  "amount": 5000,
+  "date": "2026-01-10"
+}
+
+--------------------------------------------------------------------------------
+5.6 Get All Expenses
+--------------------------------------------------------------------------------
+Title: List All Expenses
+Desc: Get all expense entries
+Method: GET
+URL: http://localhost:5000/api/v1/expenses
+Headers: Authorization: Bearer {{token}}
+Body: None
+
+--------------------------------------------------------------------------------
+5.7 Get Expenses with Filters
+--------------------------------------------------------------------------------
+Title: Filter Expenses
+Desc: Get expenses with filters
+Method: GET
+URL: http://localhost:5000/api/v1/expenses?category=feed&startDate=2026-01-01&endDate=2026-01-31&page=1&limit=10
+Headers: Authorization: Bearer {{token}}
+Body: None
+
+--------------------------------------------------------------------------------
+5.8 Get Expense Summary
+--------------------------------------------------------------------------------
+Title: Expense Summary
+Desc: Get expense summary by category
+Method: GET
+URL: http://localhost:5000/api/v1/expenses/summary?startDate=2026-01-01&endDate=2026-01-31
+Headers: Authorization: Bearer {{token}}
+Body: None
+
+--------------------------------------------------------------------------------
+5.9 Get Expense by ID
+--------------------------------------------------------------------------------
+Title: Get Expense by ID
+Desc: Get specific expense details
+Method: GET
+URL: http://localhost:5000/api/v1/expenses/{{expenseId}}
+Headers: Authorization: Bearer {{token}}
+Body: None
+
+--------------------------------------------------------------------------------
+5.10 Update Expense
+--------------------------------------------------------------------------------
+Title: Update Expense
+Desc: Update expense entry
+Method: PUT
+URL: http://localhost:5000/api/v1/expenses/{{expenseId}}
+Headers: 
+  Content-Type: application/json
+  Authorization: Bearer {{token}}
+Body:
+{
+  "name": "Updated - Purchased cattle feed - 12 bags",
+  "amount": 16000
+}
+
+--------------------------------------------------------------------------------
+5.11 Delete Expense
+--------------------------------------------------------------------------------
+Title: Delete Expense
+Desc: Delete expense entry
+Method: DELETE
+URL: http://localhost:5000/api/v1/expenses/{{expenseId}}
+Headers: Authorization: Bearer {{token}}
+Body: None
+
+================================================================================
+                              6. BREEDING MODULE
+================================================================================
+
+--------------------------------------------------------------------------------
+6.1 Create Insemination Record
+--------------------------------------------------------------------------------
+Title: Create Insemination
+Desc: Record artificial insemination (use female animal ID)
+Method: POST
+URL: http://localhost:5000/api/v1/breeding
+Headers: 
+  Content-Type: application/json
+  Authorization: Bearer {{token}}
+Body:
+{
+  "animalId": "{{femaleAnimalId}}",
+  "inseminationDate": "2026-01-20",
+  "doctorName": "Dr. Sharma",
+  "semenType": "Frozen",
+  "breed": "Jersey",
+  "notes": "First insemination attempt"
+}
+
+--------------------------------------------------------------------------------
+6.2 Create Another Insemination
+--------------------------------------------------------------------------------
+Title: Create Second Insemination
+Desc: Record another insemination for different animal
+Method: POST
+URL: http://localhost:5000/api/v1/breeding
+Headers: 
+  Content-Type: application/json
+  Authorization: Bearer {{token}}
+Body:
+{
+  "animalId": "{{anotherFemaleAnimalId}}",
+  "inseminationDate": "2026-01-15",
+  "doctorName": "Dr. Patel",
+  "semenType": "Fresh",
+  "breed": "Holstein"
+}
+
+--------------------------------------------------------------------------------
+6.3 Get All Inseminations
+--------------------------------------------------------------------------------
+Title: List All Inseminations
+Desc: Get all breeding records
+Method: GET
+URL: http://localhost:5000/api/v1/breeding
+Headers: Authorization: Bearer {{token}}
+Body: None
+
+--------------------------------------------------------------------------------
+6.4 Get Inseminations with Filters
+--------------------------------------------------------------------------------
+Title: Filter Inseminations
+Desc: Get breeding records with filters
+Method: GET
+URL: http://localhost:5000/api/v1/breeding?pregnancyStatus=check_pending&startDate=2026-01-01&endDate=2026-12-31
+Headers: Authorization: Bearer {{token}}
+Body: None
+
+--------------------------------------------------------------------------------
+6.5 Get Insemination by ID
+--------------------------------------------------------------------------------
+Title: Get Insemination by ID
+Desc: Get specific insemination record
+Method: GET
+URL: http://localhost:5000/api/v1/breeding/{{inseminationId}}
+Headers: Authorization: Bearer {{token}}
+Body: None
+
+--------------------------------------------------------------------------------
+6.6 Get Inseminations by Animal
+--------------------------------------------------------------------------------
+Title: Get by Animal
+Desc: Get all insemination records for an animal
+Method: GET
+URL: http://localhost:5000/api/v1/breeding/animal/{{animalId}}
+Headers: Authorization: Bearer {{token}}
+Body: None
+
+--------------------------------------------------------------------------------
+6.7 Get Pending Pregnancy Checks
+--------------------------------------------------------------------------------
+Title: Pending Checks
+Desc: Get all inseminations due for pregnancy check
+Method: GET
+URL: http://localhost:5000/api/v1/breeding/pending-checks
+Headers: Authorization: Bearer {{token}}
+Body: None
+
+--------------------------------------------------------------------------------
+6.8 Update Pregnancy Status - Confirmed
+--------------------------------------------------------------------------------
+Title: Confirm Pregnancy
+Desc: Update status to pregnant confirmed
+Method: PATCH
+URL: http://localhost:5000/api/v1/breeding/{{inseminationId}}/status
+Headers: 
+  Content-Type: application/json
+  Authorization: Bearer {{token}}
+Body:
+{
+  "status": "pregnant_confirmed",
+  "notes": "Confirmed by ultrasound"
+}
+
+--------------------------------------------------------------------------------
+6.9 Update Pregnancy Status - Failed
+--------------------------------------------------------------------------------
+Title: Mark Failed
+Desc: Update status to failed
+Method: PATCH
+URL: http://localhost:5000/api/v1/breeding/{{inseminationId}}/status
+Headers: 
+  Content-Type: application/json
+  Authorization: Bearer {{token}}
+Body:
+{
+  "status": "failed",
+  "notes": "Pregnancy test negative"
+}
+
+--------------------------------------------------------------------------------
+6.10 Update Pregnancy Status - Delivered
+--------------------------------------------------------------------------------
+Title: Mark Delivered
+Desc: Update status to delivered (only after confirmed)
+Method: PATCH
+URL: http://localhost:5000/api/v1/breeding/{{inseminationId}}/status
+Headers: 
+  Content-Type: application/json
+  Authorization: Bearer {{token}}
+Body:
+{
+  "status": "delivered",
+  "notes": "Healthy calf born",
+  "deliveryDate": "2026-10-20"
+}
+
+--------------------------------------------------------------------------------
+6.11 Update Insemination
+--------------------------------------------------------------------------------
+Title: Update Insemination
+Desc: Update insemination record details
+Method: PUT
+URL: http://localhost:5000/api/v1/breeding/{{inseminationId}}
+Headers: 
+  Content-Type: application/json
+  Authorization: Bearer {{token}}
+Body:
+{
+  "doctorName": "Dr. Sharma Updated",
+  "notes": "Updated notes"
+}
+
+--------------------------------------------------------------------------------
+6.12 Delete Insemination
+--------------------------------------------------------------------------------
+Title: Delete Insemination
+Desc: Delete insemination record
+Method: DELETE
+URL: http://localhost:5000/api/v1/breeding/{{inseminationId}}
+Headers: Authorization: Bearer {{token}}
+Body: None
+
+================================================================================
+                          7. PREGNANCY STATUS MODULE
+================================================================================
+
+--------------------------------------------------------------------------------
+7.1 Add Status to Timeline
+--------------------------------------------------------------------------------
+Title: Add Pregnancy Status
+Desc: Add new status to pregnancy timeline
+Method: POST
+URL: http://localhost:5000/api/v1/pregnancy-status
+Headers: 
+  Content-Type: application/json
+  Authorization: Bearer {{token}}
+Body:
+{
+  "inseminationId": "{{inseminationId}}",
+  "status": "pregnant_confirmed",
+  "notes": "Confirmed via ultrasound"
+}
+
+--------------------------------------------------------------------------------
+7.2 Add Delivered Status
+--------------------------------------------------------------------------------
+Title: Add Delivery Status
+Desc: Add delivery status with calf details
+Method: POST
+URL: http://localhost:5000/api/v1/pregnancy-status
+Headers: 
+  Content-Type: application/json
+  Authorization: Bearer {{token}}
+Body:
+{
+  "inseminationId": "{{inseminationId}}",
+  "status": "delivered",
+  "notes": "Normal delivery",
+  "deliveryDate": "2026-10-20",
+  "calfCount": 1,
+  "calfDetails": "Female calf, healthy"
+}
+
+--------------------------------------------------------------------------------
+7.3 Get All Status History
+--------------------------------------------------------------------------------
+Title: List All Status History
+Desc: Get all pregnancy status changes
+Method: GET
+URL: http://localhost:5000/api/v1/pregnancy-status
+Headers: Authorization: Bearer {{token}}
+Body: None
+
+--------------------------------------------------------------------------------
+7.4 Get Status History with Filters
+--------------------------------------------------------------------------------
+Title: Filter Status History
+Desc: Get filtered status history
+Method: GET
+URL: http://localhost:5000/api/v1/pregnancy-status?status=pregnant_confirmed&startDate=2026-01-01&endDate=2026-12-31
+Headers: Authorization: Bearer {{token}}
+Body: None
+
+--------------------------------------------------------------------------------
+7.5 Get Timeline by Insemination
+--------------------------------------------------------------------------------
+Title: Insemination Timeline
+Desc: Get complete timeline for an insemination
+Method: GET
+URL: http://localhost:5000/api/v1/pregnancy-status/insemination/{{inseminationId}}
+Headers: Authorization: Bearer {{token}}
+Body: None
+
+--------------------------------------------------------------------------------
+7.6 Get History by Animal
+--------------------------------------------------------------------------------
+Title: Animal Pregnancy History
+Desc: Get all pregnancy history for an animal
+Method: GET
+URL: http://localhost:5000/api/v1/pregnancy-status/animal/{{animalId}}
+Headers: Authorization: Bearer {{token}}
+Body: None
+
+--------------------------------------------------------------------------------
+7.7 Get Current Status
+--------------------------------------------------------------------------------
+Title: Current Status
+Desc: Get current status with full timeline
+Method: GET
+URL: http://localhost:5000/api/v1/pregnancy-status/current/{{inseminationId}}
+Headers: Authorization: Bearer {{token}}
+Body: None
+
+--------------------------------------------------------------------------------
+7.8 Get Status Statistics
+--------------------------------------------------------------------------------
+Title: Status Statistics
+Desc: Get pregnancy status statistics
+Method: GET
+URL: http://localhost:5000/api/v1/pregnancy-status/statistics
+Headers: Authorization: Bearer {{token}}
+Body: None
+
+--------------------------------------------------------------------------------
+7.9 Get Available Transitions
+--------------------------------------------------------------------------------
+Title: Available Transitions
+Desc: Get valid next status transitions
+Method: GET
+URL: http://localhost:5000/api/v1/pregnancy-status/transitions/check_pending
+Headers: Authorization: Bearer {{token}}
+Body: None
+
+================================================================================
+                            8. NOTIFICATION MODULE
+================================================================================
+
+--------------------------------------------------------------------------------
+8.1 Create Notification
+--------------------------------------------------------------------------------
+Title: Create Notification
+Desc: Create a new notification
+Method: POST
+URL: http://localhost:5000/api/v1/notifications
+Headers: 
+  Content-Type: application/json
+  Authorization: Bearer {{token}}
+Body:
+{
+  "animalId": "{{animalId}}",
+  "inseminationId": "{{inseminationId}}",
+  "type": "pregnancy_check",
+  "channel": "email",
+  "scheduledDate": "2026-04-20",
+  "message": "Pregnancy check due for COW001",
+  "subject": "Pregnancy Check Reminder",
+  "recipientEmail": "farmer@example.com"
+}
+
+--------------------------------------------------------------------------------
+8.2 Create General Notification
+--------------------------------------------------------------------------------
+Title: Create General Notification
+Desc: Create a general notification
+Method: POST
+URL: http://localhost:5000/api/v1/notifications
+Headers: 
+  Content-Type: application/json
+  Authorization: Bearer {{token}}
+Body:
+{
+  "type": "general",
+  "channel": "email",
+  "scheduledDate": "2026-01-25",
+  "message": "Monthly veterinary checkup scheduled",
+  "subject": "Veterinary Visit Reminder",
+  "recipientEmail": "farmer@example.com"
+}
+
+--------------------------------------------------------------------------------
+8.3 Get All Notifications
+--------------------------------------------------------------------------------
+Title: List Notifications
+Desc: Get all notifications
+Method: GET
+URL: http://localhost:5000/api/v1/notifications
+Headers: Authorization: Bearer {{token}}
+Body: None
+
+--------------------------------------------------------------------------------
+8.4 Get Notifications with Filters
+--------------------------------------------------------------------------------
+Title: Filter Notifications
+Desc: Get filtered notifications
+Method: GET
+URL: http://localhost:5000/api/v1/notifications?status=pending&type=pregnancy_check&page=1&limit=10
+Headers: Authorization: Bearer {{token}}
+Body: None
+
+--------------------------------------------------------------------------------
+8.5 Get Notification by ID
+--------------------------------------------------------------------------------
+Title: Get Notification by ID
+Desc: Get specific notification
+Method: GET
+URL: http://localhost:5000/api/v1/notifications/{{notificationId}}
+Headers: Authorization: Bearer {{token}}
+Body: None
+
+--------------------------------------------------------------------------------
+8.6 Update Notification X
+--------------------------------------------------------------------------------
+Title: Update Notification
+Desc: Update notification details
+Method: PUT
+URL: http://localhost:5000/api/v1/notifications/{{notificationId}}
+Headers: 
+  Content-Type: application/json
+  Authorization: Bearer {{token}}
+Body:
+{
+  "scheduledDate": "2026-04-25",
+  "message": "Updated: Pregnancy check due for COW001"
+}
+
+--------------------------------------------------------------------------------
+8.7 Cancel Notification X
+--------------------------------------------------------------------------------
+Title: Cancel Notification
+Desc: Cancel a pending notification
+Method: PATCH
+URL: http://localhost:5000/api/v1/notifications/{{notificationId}}/cancel
+Headers: Authorization: Bearer {{token}}
+Body: None
+
+--------------------------------------------------------------------------------
+8.8 Send Notification Immediately X
+--------------------------------------------------------------------------------
+Title: Send Now
+Desc: Send a notification immediately
+Method: POST
+URL: http://localhost:5000/api/v1/notifications/{{notificationId}}/send
+Headers: Authorization: Bearer {{token}}
+Body: None
+
+--------------------------------------------------------------------------------
+8.9 Delete Notification X
+--------------------------------------------------------------------------------
+Title: Delete Notification
+Desc: Delete notification
+Method: DELETE
+URL: http://localhost:5000/api/v1/notifications/{{notificationId}}
+Headers: Authorization: Bearer {{token}}
+Body: None
+
+--------------------------------------------------------------------------------
+8.10 Process Pending Notifications 
+--------------------------------------------------------------------------------
+Title: Process Pending
+Desc: Process all pending due notifications
+Method: POST
+URL: http://localhost:5000/api/v1/notifications/process-pending
+Headers: Authorization: Bearer {{token}}
+Body: None
+
+--------------------------------------------------------------------------------
+8.11 Create Pregnancy Reminders
+--------------------------------------------------------------------------------
+Title: Create Pregnancy Reminders
+Desc: Auto-create reminders for pending pregnancy checks
+Method: POST
+URL: http://localhost:5000/api/v1/notifications/pregnancy-reminders
+Headers: 
+  Content-Type: application/json
+  Authorization: Bearer {{token}}
+Body:
+{
+  "recipientEmail": "farmer@example.com"
+}
+
+--------------------------------------------------------------------------------
+8.12 Get Notification Statistics X
+--------------------------------------------------------------------------------
+Title: Notification Stats
+Desc: Get notification statistics
+Method: GET
+URL: http://localhost:5000/api/v1/notifications/statistics
+Headers: Authorization: Bearer {{token}}
+Body: None
+
+--------------------------------------------------------------------------------
+8.13 Check Email Service Status 
+--------------------------------------------------------------------------------
+Title: Email Status
+Desc: Check if email service is configured
+Method: GET
+URL: http://localhost:5000/api/v1/notifications/email-status
+Headers: Authorization: Bearer {{token}}
+Body: None
+
+--------------------------------------------------------------------------------
+8.14 Send Test Email X
+--------------------------------------------------------------------------------
+Title: Test Email
+Desc: Send a test email to verify configuration
+Method: POST
+URL: http://localhost:5000/api/v1/notifications/test-email
+Headers: 
+  Content-Type: application/json
+  Authorization: Bearer {{token}}
+Body:
+{
+  "to": "test@example.com",
+  "subject": "Test Email",
+  "message": "This is a test email from Dairy Farm Management System"
+}
+
+--------------------------------------------------------------------------------
+8.15 Get Cron Job Status 
+--------------------------------------------------------------------------------
+Title: Cron Status
+Desc: Get cron job status and next run time
+Method: GET
+URL: http://localhost:5000/api/v1/notifications/cron-status
+Headers: Authorization: Bearer {{token}}
+Body: None
+
+--------------------------------------------------------------------------------
+8.16 Run Cron Job Manually X
+--------------------------------------------------------------------------------
+Title: Run Cron
+Desc: Manually trigger the daily notification cron job
+Method: POST
+URL: http://localhost:5000/api/v1/notifications/run-cron
+Headers: Authorization: Bearer {{token}}
+Body: None
+
+================================================================================
+                              9. DASHBOARD MODULE
+================================================================================
+
+--------------------------------------------------------------------------------
+9.1 Get Dashboard Summary
+--------------------------------------------------------------------------------
+Title: Dashboard Summary
+Desc: Get complete dashboard with all stats
+Method: GET
+URL: http://localhost:5000/api/v1/dashboard/summary
+Headers: Authorization: Bearer {{token}}
+Body: None
+
+--------------------------------------------------------------------------------
+9.2 Get Dashboard with Period
+--------------------------------------------------------------------------------
+Title: Monthly Dashboard
+Desc: Get dashboard for specific period
+Method: GET
+URL: http://localhost:5000/api/v1/dashboard/summary?period=monthly
+Headers: Authorization: Bearer {{token}}
+Body: None
+
+--------------------------------------------------------------------------------
+9.3 Get Dashboard with Custom Range
+--------------------------------------------------------------------------------
+Title: Custom Range Dashboard
+Desc: Get dashboard for custom date range
+Method: GET
+URL: http://localhost:5000/api/v1/dashboard/summary?period=custom&startDate=2026-01-01&endDate=2026-01-31
+Headers: Authorization: Bearer {{token}}
+Body: None
+
+--------------------------------------------------------------------------------
+9.4 Get Milk Trends
+--------------------------------------------------------------------------------
+Title: Milk Trends
+Desc: Get milk collection trends over time
+Method: GET
+URL: http://localhost:5000/api/v1/dashboard/milk-trends?period=monthly
+Headers: Authorization: Bearer {{token}}
+Body: None
+
+--------------------------------------------------------------------------------
+9.5 Get Expense Trends
+--------------------------------------------------------------------------------
+Title: Expense Trends
+Desc: Get expense trends by category over time
+Method: GET
+URL: http://localhost:5000/api/v1/dashboard/expense-trends?period=monthly
+Headers: Authorization: Bearer {{token}}
+Body: None
+
+--------------------------------------------------------------------------------
+9.6 Get Profit/Loss Trends
+--------------------------------------------------------------------------------
+Title: Profit/Loss Trends
+Desc: Get income vs expenses over time
+Method: GET
+URL: http://localhost:5000/api/v1/dashboard/profit-loss-trends?period=monthly
+Headers: Authorization: Bearer {{token}}
+Body: None
+
+--------------------------------------------------------------------------------
+9.7 Get Cow Milk Summary
+--------------------------------------------------------------------------------
+Title: Cow Milk Summary
+Desc: Get cow milk collection summary
+Method: GET
+URL: http://localhost:5000/api/v1/dashboard/cow-milk?period=monthly
+Headers: Authorization: Bearer {{token}}
+Body: None
+
+--------------------------------------------------------------------------------
+9.8 Get Buffalo Milk Summary
+--------------------------------------------------------------------------------
+Title: Buffalo Milk Summary
+Desc: Get buffalo milk collection summary
+Method: GET
+URL: http://localhost:5000/api/v1/dashboard/buffalo-milk?period=monthly
+Headers: Authorization: Bearer {{token}}
+Body: None
+
+--------------------------------------------------------------------------------
+9.9 Get Animal Statistics
+--------------------------------------------------------------------------------
+Title: Animal Stats
+Desc: Get animal counts (active, sold, by type)
+Method: GET
+URL: http://localhost:5000/api/v1/dashboard/animal-stats
+Headers: Authorization: Bearer {{token}}
+Body: None
+
+--------------------------------------------------------------------------------
+9.10 Get Breeding Statistics
+--------------------------------------------------------------------------------
+Title: Breeding Stats
+Desc: Get breeding/pregnancy statistics
+Method: GET
+URL: http://localhost:5000/api/v1/dashboard/breeding-stats?period=yearly
+Headers: Authorization: Bearer {{token}}
+Body: None
+
+================================================================================
+                           TESTING ORDER RECOMMENDATION
+================================================================================
+
+Follow this order for complete testing:
+
+1. Health Check (verify server running)
+2. Auth: Signup → Login (save token)
+3. Milk Rates: Create cow rate → Create buffalo rate
+4. Animals: Create cows → Create buffaloes
+5. Milk Collection: Create entries for different sessions/types
+6. Expenses: Create various expense categories
+7. Breeding: Create insemination records
+8. Pregnancy Status: Update statuses through timeline
+9. Notifications: Create and test notifications
+10. Dashboard: View all reports and analytics
+
+================================================================================
+                                   PERIOD VALUES
+================================================================================
+
+For dashboard endpoints, use these period values:
+- daily    : Today's data
+- weekly   : This week (Sunday to Saturday)
+- monthly  : This month
+- yearly   : This year
+- custom   : Custom date range (requires startDate & endDate)
+
+================================================================================
+                              PREGNANCY STATUS FLOW
+================================================================================
+
+Valid status transitions:
+- check_pending → pregnant_confirmed
+- check_pending → failed
+- pregnant_confirmed → delivered
+- pregnant_confirmed → failed
+
+Terminal states (no further transitions):
+- failed
+- delivered
+
+================================================================================
+                                EXPENSE CATEGORIES
+================================================================================
+
+Valid categories:
+- feed
+- medicine
+- equipment
+- labor
+- maintenance
+- transport
+- other
+
+================================================================================
+                                      END
+================================================================================
