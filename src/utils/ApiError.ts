@@ -41,6 +41,12 @@ export class ConflictError extends ApiError {
   }
 }
 
+export class TooManyRequestsError extends ApiError {
+  constructor(message = 'Too Many Requests') {
+    super(429, message);
+  }
+}
+
 export class ValidationError extends ApiError {
   constructor(message = 'Validation Error') {
     super(422, message);
