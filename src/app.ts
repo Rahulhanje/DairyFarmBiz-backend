@@ -4,6 +4,7 @@ import { errorHandler, notFoundHandler } from './middlewares';
 import { authRoutes } from './modules/auth';
 import { animalRoutes } from './modules/animal';
 import { milkRateRoutes } from './modules/milk-rate';
+import { milkCollectionRoutes } from './modules/milk-collection';
 
 const app: Application = express();
 
@@ -25,7 +26,7 @@ app.get('/health', (_req, res) => {
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/animals', animalRoutes);
 app.use('/api/v1/milk-rates', milkRateRoutes);
-// app.use('/api/v1/milk-collection', milkCollectionRoutes);
+app.use('/api/v1/milk-collection', milkCollectionRoutes);
 // app.use('/api/v1/expenses', expenseRoutes);
 // app.use('/api/v1/breeding', breedingRoutes);
 // app.use('/api/v1/dashboard', dashboardRoutes);
