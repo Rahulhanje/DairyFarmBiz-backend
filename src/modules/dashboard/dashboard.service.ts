@@ -138,9 +138,11 @@ class DashboardService {
    */
   async getMilkSummary(
     animalType: 'cow' | 'buffalo',
-    dateRange: DateRange
+    dateRange: DateRange,
+    userId: string
   ): Promise<MilkSummary> {
     const matchStage = {
+      userId,
       animalType,
       date: {
         $gte: dateRange.startDate,
@@ -201,13 +203,14 @@ class DashboardService {
   /**
    * Get expense summary
    */
-  async getExpenseSummary(dateRange: DateRange): Promise<{
+  async getExpenseSummary(dateRange: DateRange, userId: string): Promise<{
     total: number;
     byCategory: Record<string, number>;
   }> {
     const result = await Expense.aggregate([
       {
         $match: {
+          userId,
           date: {
             $gte: dateRange.startDate,
             $lte: dateRange.endDate,
@@ -236,7 +239,7 @@ class DashboardService {
   /**
    * Get animal statistics
    */
-  async getAnimalStats(): Promise<{
+  async getAnimalStats(userId: string): Promise<{
     totalCows: number;
     totalBuffaloes: number;
     activeCows: number;
@@ -244,6 +247,9 @@ class DashboardService {
     soldAnimals: number;
   }> {
     const result = await Animal.aggregate([
+      {
+        $match: { userId },
+      },
       {
         $group: {
           _id: {
@@ -290,7 +296,7 @@ class DashboardService {
   /**
    * Get breeding statistics
    */
-  async getBreedingStats(dateRange: DateRange): Promise<{
+  async getBreedingStats(dateRange: DateRange, userId: string): Promise<{
     totalInseminations: number;
     pendingChecks: number;
     confirmed: number;
@@ -300,6 +306,7 @@ class DashboardService {
     const result = await Insemination.aggregate([
       {
         $match: {
+          userId,
           inseminationDate: {
             $gte: dateRange.startDate,
             $lte: dateRange.endDate,
@@ -350,16 +357,17 @@ class DashboardService {
   async getDashboardSummary(
     period: Period = 'monthly',
     customStart?: Date,
-    customEnd?: Date
+    customEnd?: Date,
+    userId?: string
   ): Promise<DashboardSummary> {
     const dateRange = this.getDateRange(period, customStart, customEnd);
 
     const [cowMilk, buffaloMilk, expenses, animalStats, breedingStats] = await Promise.all([
-      this.getMilkSummary('cow', dateRange),
-      this.getMilkSummary('buffalo', dateRange),
-      this.getExpenseSummary(dateRange),
-      this.getAnimalStats(),
-      this.getBreedingStats(dateRange),
+      this.getMilkSummary('cow', dateRange, userId!),
+      this.getMilkSummary('buffalo', dateRange, userId!),
+      this.getExpenseSummary(dateRange, userId!),
+      this.getAnimalStats(userId!),
+      this.getBreedingStats(dateRange, userId!),
     ]);
 
     const totalIncome = cowMilk.totalAmount + buffaloMilk.totalAmount;
@@ -396,7 +404,8 @@ class DashboardService {
   async getMilkTrends(
     period: Period = 'monthly',
     customStart?: Date,
-    customEnd?: Date
+    customEnd?: Date,
+    userId?: string
   ): Promise<{
     dateRange: DateRange;
     trends: Array<{
@@ -448,6 +457,7 @@ class DashboardService {
     const result = await MilkCollection.aggregate([
       {
         $match: {
+          userId,
           date: {
             $gte: dateRange.startDate,
             $lte: dateRange.endDate,
@@ -520,7 +530,8 @@ class DashboardService {
   async getExpenseTrends(
     period: Period = 'monthly',
     customStart?: Date,
-    customEnd?: Date
+    customEnd?: Date,
+    userId?: string
   ): Promise<{
     dateRange: DateRange;
     trends: Array<{
@@ -552,6 +563,7 @@ class DashboardService {
     const result = await Expense.aggregate([
       {
         $match: {
+          userId,
           date: {
             $gte: dateRange.startDate,
             $lte: dateRange.endDate,
@@ -609,7 +621,8 @@ class DashboardService {
   async getProfitLossTrends(
     period: Period = 'monthly',
     customStart?: Date,
-    customEnd?: Date
+    customEnd?: Date,
+    userId?: string
   ): Promise<{
     dateRange: DateRange;
     trends: Array<{
@@ -620,8 +633,8 @@ class DashboardService {
     }>;
   }> {
     const [milkTrends, expenseTrends] = await Promise.all([
-      this.getMilkTrends(period, customStart, customEnd),
-      this.getExpenseTrends(period, customStart, customEnd),
+      this.getMilkTrends(period, customStart, customEnd, userId),
+      this.getExpenseTrends(period, customStart, customEnd, userId),
     ]);
 
     // Create a map of all dates

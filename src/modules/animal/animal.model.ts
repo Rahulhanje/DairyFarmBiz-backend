@@ -3,6 +3,7 @@ import { AnimalType } from '../../types';
 
 export interface IAnimal extends Document {
   _id: mongoose.Types.ObjectId;
+  userId: mongoose.Types.ObjectId;
   serialNumber: string;
   nickName: string;
   animalType: AnimalType;
@@ -29,6 +30,12 @@ export interface IAnimal extends Document {
 
 const animalSchema = new Schema<IAnimal>(
   {
+    userId: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      required: [true, 'User ID is required'],
+      index: true,
+    },
     serialNumber: {
       type: String,
       required: [true, 'Serial number is required'],

@@ -1,4 +1,5 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
+import { AuthRequest } from '../../types';
 import { milkCollectionService } from './milk-collection.service';
 import { asyncHandler } from '../../utils/asyncHandler';
 import { sendSuccess, sendCreated, sendPaginated } from '../../utils/responseHandler';
@@ -9,10 +10,11 @@ import { AnimalType, MilkSession } from '../../types';
  * @route   POST /api/v1/milk-collection
  * @access  Private
  */
-export const createMilkCollection = asyncHandler(async (req: Request, res: Response) => {
+export const createMilkCollection = asyncHandler(async (req: AuthRequest, res: Response) => {
   const { date, session, animalType, totalMilk, notes } = req.body;
 
   const collection = await milkCollectionService.create({
+    userId: req.user?.id!,
     date: new Date(date),
     session,
     animalType,
@@ -28,7 +30,7 @@ export const createMilkCollection = asyncHandler(async (req: Request, res: Respo
  * @route   GET /api/v1/milk-collection
  * @access  Private
  */
-export const getMilkCollections = asyncHandler(async (req: Request, res: Response) => {
+export const getMilkCollections = asyncHandler(async (req: AuthRequest, res: Response) => {
   const page = parseInt(req.query.page as string) || 1;
   // Use limit=0 to fetch all records (when filters are applied)
   const limitParam = req.query.limit as string;
@@ -39,6 +41,7 @@ export const getMilkCollections = asyncHandler(async (req: Request, res: Respons
   const session = req.query.session as MilkSession | undefined;
 
   const { collections, total } = await milkCollectionService.getAll(
+    req.user?.id!,
     { startDate, endDate, animalType, session },
     page,
     limit
@@ -52,8 +55,8 @@ export const getMilkCollections = asyncHandler(async (req: Request, res: Respons
  * @route   GET /api/v1/milk-collection/:id
  * @access  Private
  */
-export const getMilkCollection = asyncHandler(async (req: Request, res: Response) => {
-  const collection = await milkCollectionService.getById(req.params.id);
+export const getMilkCollection = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const collection = await milkCollectionService.getById(req.user?.id!, req.params.id);
   sendSuccess(res, collection, 'Milk collection entry fetched successfully');
 });
 
@@ -62,10 +65,10 @@ export const getMilkCollection = asyncHandler(async (req: Request, res: Response
  * @route   PUT /api/v1/milk-collection/:id
  * @access  Private
  */
-export const updateMilkCollection = asyncHandler(async (req: Request, res: Response) => {
+export const updateMilkCollection = asyncHandler(async (req: AuthRequest, res: Response) => {
   const { date, session, animalType, totalMilk, notes } = req.body;
 
-  const collection = await milkCollectionService.update(req.params.id, {
+  const collection = await milkCollectionService.update(req.user?.id!, req.params.id, {
     date: date ? new Date(date) : undefined,
     session,
     animalType,
@@ -81,8 +84,8 @@ export const updateMilkCollection = asyncHandler(async (req: Request, res: Respo
  * @route   DELETE /api/v1/milk-collection/:id
  * @access  Private
  */
-export const deleteMilkCollection = asyncHandler(async (req: Request, res: Response) => {
-  const collection = await milkCollectionService.delete(req.params.id);
+export const deleteMilkCollection = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const collection = await milkCollectionService.delete(req.user?.id!, req.params.id);
   sendSuccess(res, collection, 'Milk collection entry deleted successfully');
 });
 
@@ -91,10 +94,10 @@ export const deleteMilkCollection = asyncHandler(async (req: Request, res: Respo
  * @route   GET /api/v1/milk-collection/daily-summary
  * @access  Private
  */
-export const getDailySummary = asyncHandler(async (req: Request, res: Response) => {
+export const getDailySummary = asyncHandler(async (req: AuthRequest, res: Response) => {
   const date = req.query.date ? new Date(req.query.date as string) : new Date();
 
-  const summary = await milkCollectionService.getDailySummary(date);
+  const summary = await milkCollectionService.getDailySummary(req.user?.id!, date);
 
   sendSuccess(res, summary, 'Daily summary fetched successfully');
 });
@@ -104,10 +107,10 @@ export const getDailySummary = asyncHandler(async (req: Request, res: Response) 
  * @route   GET /api/v1/milk-collection/by-date
  * @access  Private
  */
-export const getByDate = asyncHandler(async (req: Request, res: Response) => {
+export const getByDate = asyncHandler(async (req: AuthRequest, res: Response) => {
   const date = req.query.date ? new Date(req.query.date as string) : new Date();
 
-  const collections = await milkCollectionService.getByDate(date);
+  const collections = await milkCollectionService.getByDate(req.user?.id!, date);
 
   sendSuccess(res, collections, 'Milk collections fetched successfully');
 });

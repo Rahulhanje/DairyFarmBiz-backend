@@ -3,6 +3,7 @@ import { AnimalType } from '../../types';
 import { NotFoundError, ConflictError, BadRequestError } from '../../utils/ApiError';
 
 export interface CreateAnimalData {
+  userId: string;
   serialNumber: string;
   nickName: string;
   animalType: AnimalType;
@@ -49,8 +50,9 @@ class AnimalService {
    * Create a new animal
    */
   async create(data: CreateAnimalData): Promise<IAnimal> {
-    // Check for duplicate serialNumber within same animalType
+    // Check for duplicate serialNumber within same animalType and user
     const existingAnimal = await Animal.findOne({
+      userId: data.userId,
       serialNumber: data.serialNumber,
       animalType: data.animalType,
     });
@@ -69,11 +71,14 @@ class AnimalService {
    * Get all animals with filters
    */
   async getAll(
+    userId: string,
     filter: AnimalFilter = {},
     page = 1,
     limit = 10
   ): Promise<{ animals: IAnimal[]; total: number }> {
-    const query: Record<string, unknown> = {};
+    const query: Record<string, unknown> = {
+      userId, // Filter by user
+    };
 
     if (filter.animalType) {
       query.animalType = filter.animalType;
@@ -111,8 +116,8 @@ class AnimalService {
   /**
    * Get animal by ID
    */
-  async getById(id: string): Promise<IAnimal> {
-    const animal = await Animal.findById(id);
+  async getById(id: string, userId: string): Promise<IAnimal> {
+    const animal = await Animal.findOne({ _id: id, userId });
 
     if (!animal) {
       throw new NotFoundError('Animal not found');
@@ -124,8 +129,8 @@ class AnimalService {
   /**
    * Update animal
    */
-  async update(id: string, data: UpdateAnimalData): Promise<IAnimal> {
-    const animal = await Animal.findById(id);
+  async update(id: string, userId: string, data: UpdateAnimalData): Promise<IAnimal> {
+    const animal = await Animal.findOne({ _id: id, userId });
 
     if (!animal) {
       throw new NotFoundError('Animal not found');
@@ -137,6 +142,7 @@ class AnimalService {
       const checkAnimalType = data.animalType || animal.animalType;
 
       const existingAnimal = await Animal.findOne({
+        userId,
         serialNumber: checkSerialNumber,
         animalType: checkAnimalType,
         _id: { $ne: id },
@@ -165,8 +171,8 @@ class AnimalService {
   /**
    * Sell an animal
    */
-  async sell(id: string, data: SellAnimalData): Promise<IAnimal> {
-    const animal = await Animal.findById(id);
+  async sell(id: string, userId: string, data: SellAnimalData): Promise<IAnimal> {
+    const animal = await Animal.findOne({ _id: id, userId });
 
     if (!animal) {
       throw new NotFoundError('Animal not found');
@@ -201,8 +207,8 @@ class AnimalService {
   /**
    * Delete animal (soft delete - mark as inactive)
    */
-  async delete(id: string): Promise<IAnimal> {
-    const animal = await Animal.findById(id);
+  async delete(id: string, userId: string): Promise<IAnimal> {
+    const animal = await Animal.findOne({ _id: id, userId });
 
     if (!animal) {
       throw new NotFoundError('Animal not found');
@@ -224,8 +230,8 @@ class AnimalService {
   /**
    * Permanently delete animal
    */
-  async permanentDelete(id: string): Promise<void> {
-    const animal = await Animal.findById(id);
+  async permanentDelete(id: string, userId: string): Promise<void> {
+    const animal = await Animal.findOne({ _id: id, userId });
 
     if (!animal) {
       throw new NotFoundError('Animal not found');
@@ -237,7 +243,7 @@ class AnimalService {
   /**
    * Get animal counts by type
    */
-  async getCounts(): Promise<{
+  async getCounts(userId: string): Promise<{
     cows: number;
     buffaloes: number;
     total: number;
@@ -245,10 +251,10 @@ class AnimalService {
     sold: number;
   }> {
     const [cows, buffaloes, active, sold] = await Promise.all([
-      Animal.countDocuments({ animalType: 'cow', isActive: true }),
-      Animal.countDocuments({ animalType: 'buffalo', isActive: true }),
-      Animal.countDocuments({ isActive: true, isSold: false }),
-      Animal.countDocuments({ isSold: true }),
+      Animal.countDocuments({ userId, animalType: 'cow', isActive: true }),
+      Animal.countDocuments({ userId, animalType: 'buffalo', isActive: true }),
+      Animal.countDocuments({ userId, isActive: true, isSold: false }),
+      Animal.countDocuments({ userId, isSold: true }),
     ]);
 
     return {
@@ -263,8 +269,9 @@ class AnimalService {
   /**
    * Get active animals (not sold) by type
    */
-  async getActiveByType(animalType: AnimalType): Promise<IAnimal[]> {
+  async getActiveByType(animalType: AnimalType, userId: string): Promise<IAnimal[]> {
     return Animal.find({
+      userId,
       animalType,
       isActive: true,
       isSold: false,

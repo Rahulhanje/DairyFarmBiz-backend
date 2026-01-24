@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import { Expense, IExpense } from './expense.model';
 import { ExpenseCategory } from '../../types';
 import { NotFoundError } from '../../utils/ApiError';
@@ -19,6 +20,7 @@ const getUTCEndOfDay = (date: Date | string): Date => {
 };
 
 export interface CreateExpenseData {
+  userId: string;
   name: string;
   amount: number;
   date?: Date;
@@ -45,11 +47,12 @@ class ExpenseService {
   /**
    * Create a new expense
    */
-  async create(data: CreateExpenseData): Promise<IExpense> {
+  async create(userId: string, data: CreateExpenseData): Promise<IExpense> {
     const expenseDate = data.date ? normalizeToUTCMidnight(data.date) : normalizeToUTCMidnight(new Date());
 
     const expense = await Expense.create({
       ...data,
+      userId,
       date: expenseDate,
     });
 
@@ -60,11 +63,12 @@ class ExpenseService {
    * Get all expenses with filters
    */
   async getAll(
+    userId: string,
     filter: ExpenseFilter = {},
     page = 1,
     limit = 10
   ): Promise<{ expenses: IExpense[]; total: number }> {
-    const query: Record<string, unknown> = {};
+    const query: Record<string, unknown> = { userId };
 
     if (filter.startDate || filter.endDate) {
       query.date = {};
@@ -100,8 +104,8 @@ class ExpenseService {
   /**
    * Get expense by ID
    */
-  async getById(id: string): Promise<IExpense> {
-    const expense = await Expense.findById(id);
+  async getById(userId: string, id: string): Promise<IExpense> {
+    const expense = await Expense.findOne({ _id: id, userId });
 
     if (!expense) {
       throw new NotFoundError('Expense not found');
@@ -113,8 +117,8 @@ class ExpenseService {
   /**
    * Update expense
    */
-  async update(id: string, data: UpdateExpenseData): Promise<IExpense> {
-    const expense = await Expense.findById(id);
+  async update(userId: string, id: string, data: UpdateExpenseData): Promise<IExpense> {
+    const expense = await Expense.findOne({ _id: id, userId });
 
     if (!expense) {
       throw new NotFoundError('Expense not found');
@@ -125,8 +129,8 @@ class ExpenseService {
       data.date = normalizeToUTCMidnight(data.date);
     }
 
-    const updatedExpense = await Expense.findByIdAndUpdate(
-      id,
+    const updatedExpense = await Expense.findOneAndUpdate(
+      { _id: id, userId },
       { $set: data },
       { new: true, runValidators: true }
     );
@@ -141,14 +145,14 @@ class ExpenseService {
   /**
    * Delete expense
    */
-  async delete(id: string): Promise<IExpense> {
-    const expense = await Expense.findById(id);
+  async delete(userId: string, id: string): Promise<IExpense> {
+    const expense = await Expense.findOne({ _id: id, userId });
 
     if (!expense) {
       throw new NotFoundError('Expense not found');
     }
 
-    await Expense.findByIdAndDelete(id);
+    await Expense.findOneAndDelete({ _id: id, userId });
 
     return expense;
   }
@@ -157,6 +161,7 @@ class ExpenseService {
    * Get total expenses for a date range
    */
   async getTotalByDateRange(
+    userId: string,
     startDate: Date,
     endDate: Date
   ): Promise<{ total: number; count: number; byCategory: Record<string, number> }> {
@@ -166,6 +171,7 @@ class ExpenseService {
     const result = await Expense.aggregate([
       {
         $match: {
+          userId: new mongoose.Types.ObjectId(userId),
           date: { $gte: start, $lte: end },
         },
       },
@@ -198,8 +204,13 @@ class ExpenseService {
   /**
    * Get expenses summary by category
    */
-  async getSummaryByCategory(): Promise<Array<{ category: string; total: number; count: number }>> {
+  async getSummaryByCategory(userId: string): Promise<Array<{ category: string; total: number; count: number }>> {
     const result = await Expense.aggregate([
+      {
+        $match: {
+          userId: new mongoose.Types.ObjectId(userId),
+        },
+      },
       {
         $group: {
           _id: '$category',

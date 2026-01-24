@@ -3,6 +3,7 @@ import { PregnancyStatus } from '../../types';
 
 export interface IInsemination extends Document {
   _id: mongoose.Types.ObjectId;
+  userId: mongoose.Types.ObjectId;
   animal: mongoose.Types.ObjectId;
   inseminationDate: Date;
   doctorName?: string;
@@ -20,6 +21,12 @@ export interface IInsemination extends Document {
 
 const inseminationSchema = new Schema<IInsemination>(
   {
+    userId: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      required: [true, 'User ID is required'],
+      index: true,
+    },
     animal: {
       type: Schema.Types.ObjectId,
       ref: 'Animal',

@@ -1,11 +1,12 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
 export type NotificationType = 'pregnancy_check' | 'vaccination' | 'breeding_reminder' | 'general';
-export type NotificationChannel = 'email' | 'sms' | 'push' | 'in_app';
+export type NotificationChannel = 'email' | 'whatsapp' | 'sms' | 'push' | 'in_app';
 export type NotificationStatus = 'pending' | 'sent' | 'failed' | 'cancelled';
 
 export interface INotification extends Document {
   _id: mongoose.Types.ObjectId;
+  userId: mongoose.Types.ObjectId;
   animal?: mongoose.Types.ObjectId;
   insemination?: mongoose.Types.ObjectId;
   type: NotificationType;
@@ -28,6 +29,12 @@ export interface INotification extends Document {
 
 const notificationSchema = new Schema<INotification>(
   {
+    userId: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      required: [true, 'User ID is required'],
+      index: true,
+    },
     animal: {
       type: Schema.Types.ObjectId,
       ref: 'Animal',
@@ -48,7 +55,7 @@ const notificationSchema = new Schema<INotification>(
       type: String,
       required: [true, 'Notification channel is required'],
       enum: {
-        values: ['email', 'sms', 'push', 'in_app'],
+        values: ['email', 'whatsapp', 'sms', 'push', 'in_app'],
         message: 'Invalid notification channel',
       },
       default: 'email',
@@ -117,11 +124,11 @@ const notificationSchema = new Schema<INotification>(
 );
 
 // Indexes for common queries
-notificationSchema.index({ scheduledDate: 1, status: 1 });
-notificationSchema.index({ animal: 1 });
-notificationSchema.index({ insemination: 1 });
-notificationSchema.index({ isSent: 1, scheduledDate: 1 });
-notificationSchema.index({ type: 1, status: 1 });
+notificationSchema.index({ userId: 1, scheduledDate: 1, status: 1 });
+notificationSchema.index({ userId: 1, animal: 1 });
+notificationSchema.index({ userId: 1, insemination: 1 });
+notificationSchema.index({ userId: 1, isSent: 1, scheduledDate: 1 });
+notificationSchema.index({ userId: 1, type: 1, status: 1 });
 
 export const Notification = mongoose.model<INotification>(
   'Notification',

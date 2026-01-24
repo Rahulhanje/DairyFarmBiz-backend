@@ -14,6 +14,7 @@ const VALID_TRANSITIONS: Record<PregnancyStatus, PregnancyStatus[]> = {
 };
 
 export interface AddStatusData {
+  userId: string;
   inseminationId: string;
   status: PregnancyStatus;
   notes?: string;
@@ -39,8 +40,10 @@ class PregnancyStatusService {
    */
   async addStatus(data: AddStatusData): Promise<IPregnancyStatusHistory> {
     // Get the insemination record
-    const insemination = await Insemination.findById(data.inseminationId)
-      .populate('animal', 'serialNumber nickName isSold');
+    const insemination = await Insemination.findOne({
+      _id: data.inseminationId,
+      userId: new mongoose.Types.ObjectId(data.userId),
+    }).populate('animal', 'serialNumber nickName isSold');
 
     if (!insemination) {
       throw new NotFoundError('Insemination record not found');
@@ -75,6 +78,7 @@ class PregnancyStatusService {
 
     // Create status history entry
     const statusHistory = await PregnancyStatusHistory.create({
+      userId: new mongoose.Types.ObjectId(data.userId),
       insemination: new mongoose.Types.ObjectId(data.inseminationId),
       animal: animal._id,
       status: data.status,
@@ -105,14 +109,18 @@ class PregnancyStatusService {
   /**
    * Get status timeline for an insemination
    */
-  async getTimelineByInsemination(inseminationId: string): Promise<IPregnancyStatusHistory[]> {
-    const insemination = await Insemination.findById(inseminationId);
+  async getTimelineByInsemination(userId: string, inseminationId: string): Promise<IPregnancyStatusHistory[]> {
+    const insemination = await Insemination.findOne({
+      _id: inseminationId,
+      userId: new mongoose.Types.ObjectId(userId),
+    });
 
     if (!insemination) {
       throw new NotFoundError('Insemination record not found');
     }
 
     return PregnancyStatusHistory.find({
+      userId: new mongoose.Types.ObjectId(userId),
       insemination: new mongoose.Types.ObjectId(inseminationId),
     })
       .sort({ changedAt: 1 }) // Chronological order
@@ -122,14 +130,18 @@ class PregnancyStatusService {
   /**
    * Get status history for an animal (all inseminations)
    */
-  async getHistoryByAnimal(animalId: string): Promise<IPregnancyStatusHistory[]> {
-    const animal = await Animal.findById(animalId);
+  async getHistoryByAnimal(userId: string, animalId: string): Promise<IPregnancyStatusHistory[]> {
+    const animal = await Animal.findOne({
+      _id: animalId,
+      userId: new mongoose.Types.ObjectId(userId),
+    });
 
     if (!animal) {
       throw new NotFoundError('Animal not found');
     }
 
     return PregnancyStatusHistory.find({
+      userId: new mongoose.Types.ObjectId(userId),
       animal: new mongoose.Types.ObjectId(animalId),
     })
       .sort({ changedAt: -1 })
@@ -140,11 +152,14 @@ class PregnancyStatusService {
    * Get all status history with filters
    */
   async getAll(
+    userId: string,
     filter: StatusHistoryFilter = {},
     page = 1,
     limit = 10
   ): Promise<{ history: IPregnancyStatusHistory[]; total: number }> {
-    const query: Record<string, unknown> = {};
+    const query: Record<string, unknown> = {
+      userId: new mongoose.Types.ObjectId(userId),
+    };
 
     if (filter.inseminationId) {
       query.insemination = new mongoose.Types.ObjectId(filter.inseminationId);
@@ -190,18 +205,22 @@ class PregnancyStatusService {
   /**
    * Get current status for an insemination
    */
-  async getCurrentStatus(inseminationId: string): Promise<{
+  async getCurrentStatus(userId: string, inseminationId: string): Promise<{
     currentStatus: PregnancyStatus;
     lastUpdate: IPregnancyStatusHistory | null;
     timeline: IPregnancyStatusHistory[];
   }> {
-    const insemination = await Insemination.findById(inseminationId);
+    const insemination = await Insemination.findOne({
+      _id: inseminationId,
+      userId: new mongoose.Types.ObjectId(userId),
+    });
 
     if (!insemination) {
       throw new NotFoundError('Insemination record not found');
     }
 
     const timeline = await PregnancyStatusHistory.find({
+      userId: new mongoose.Types.ObjectId(userId),
       insemination: new mongoose.Types.ObjectId(inseminationId),
     }).sort({ changedAt: 1 });
 
@@ -217,13 +236,16 @@ class PregnancyStatusService {
   /**
    * Get status change statistics
    */
-  async getStatistics(): Promise<{
+  async getStatistics(userId: string): Promise<{
     totalChanges: number;
     byStatus: Record<string, number>;
     byMonth: Array<{ month: string; count: number }>;
   }> {
     const [byStatusResult, byMonthResult] = await Promise.all([
       PregnancyStatusHistory.aggregate([
+        {
+          $match: { userId: new mongoose.Types.ObjectId(userId) },
+        },
         {
           $group: {
             _id: '$status',
@@ -232,6 +254,9 @@ class PregnancyStatusService {
         },
       ]),
       PregnancyStatusHistory.aggregate([
+        {
+          $match: { userId: new mongoose.Types.ObjectId(userId) },
+        },
         {
           $group: {
             _id: {

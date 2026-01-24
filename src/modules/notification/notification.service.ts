@@ -6,6 +6,7 @@ import { config } from '../../config';
 import mongoose from 'mongoose';
 
 export interface CreateNotificationData {
+  userId: string;
   animalId?: string;
   inseminationId?: string;
   type: NotificationType;
@@ -44,6 +45,7 @@ class NotificationService {
    */
   async create(data: CreateNotificationData): Promise<INotification> {
     const notification = await Notification.create({
+      userId: new mongoose.Types.ObjectId(data.userId),
       animal: data.animalId ? new mongoose.Types.ObjectId(data.animalId) : undefined,
       insemination: data.inseminationId ? new mongoose.Types.ObjectId(data.inseminationId) : undefined,
       type: data.type,
@@ -65,8 +67,8 @@ class NotificationService {
   /**
    * Get notification by ID
    */
-  async getById(id: string): Promise<INotification> {
-    const notification = await Notification.findById(id)
+  async getById(id: string, userId: string): Promise<INotification> {
+    const notification = await Notification.findOne({ _id: id, userId: new mongoose.Types.ObjectId(userId) })
       .populate('animal', 'serialNumber nickName animalType')
       .populate('insemination', 'inseminationDate pregnancyCheckDate');
 
@@ -80,8 +82,8 @@ class NotificationService {
   /**
    * Update a notification (only if not sent)
    */
-  async update(id: string, data: UpdateNotificationData): Promise<INotification> {
-    const notification = await Notification.findById(id);
+  async update(id: string, userId: string, data: UpdateNotificationData): Promise<INotification> {
+    const notification = await Notification.findOne({ _id: id, userId: new mongoose.Types.ObjectId(userId) });
 
     if (!notification) {
       throw new NotFoundError('Notification not found');
@@ -91,8 +93,8 @@ class NotificationService {
       throw new BadRequestError('Cannot update a sent notification');
     }
 
-    const updated = await Notification.findByIdAndUpdate(
-      id,
+    const updated = await Notification.findOneAndUpdate(
+      { _id: id, userId: new mongoose.Types.ObjectId(userId) },
       { $set: data },
       { new: true, runValidators: true }
     )
@@ -105,8 +107,8 @@ class NotificationService {
   /**
    * Cancel a notification
    */
-  async cancel(id: string): Promise<INotification> {
-    const notification = await Notification.findById(id);
+  async cancel(id: string, userId: string): Promise<INotification> {
+    const notification = await Notification.findOne({ _id: id, userId: new mongoose.Types.ObjectId(userId) });
 
     if (!notification) {
       throw new NotFoundError('Notification not found');
@@ -125,25 +127,28 @@ class NotificationService {
   /**
    * Delete a notification
    */
-  async delete(id: string): Promise<void> {
-    const notification = await Notification.findById(id);
+  async delete(id: string, userId: string): Promise<void> {
+    const notification = await Notification.findOne({ _id: id, userId: new mongoose.Types.ObjectId(userId) });
 
     if (!notification) {
       throw new NotFoundError('Notification not found');
     }
 
-    await Notification.findByIdAndDelete(id);
+    await Notification.findOneAndDelete({ _id: id, userId: new mongoose.Types.ObjectId(userId) });
   }
 
   /**
    * Get all notifications with filters
    */
   async getAll(
+    userId: string,
     filter: NotificationFilter = {},
     page = 1,
     limit = 10
   ): Promise<{ notifications: INotification[]; total: number }> {
-    const query: Record<string, unknown> = {};
+    const query: Record<string, unknown> = {
+      userId: new mongoose.Types.ObjectId(userId),
+    };
 
     if (filter.status) {
       query.status = filter.status;
@@ -324,13 +329,14 @@ class NotificationService {
   /**
    * Create pregnancy check reminder notifications
    */
-  async createPregnancyCheckReminders(recipientEmail: string): Promise<number> {
-    const pendingChecks = await breedingService.getPendingPregnancyChecks();
+  async createPregnancyCheckReminders(userId: string, recipientEmail: string): Promise<number> {
+    const pendingChecks = await breedingService.getPendingPregnancyChecks(userId);
     let created = 0;
 
     for (const insemination of pendingChecks) {
       // Check if notification already exists for this insemination
       const existing = await Notification.findOne({
+        userId: new mongoose.Types.ObjectId(userId),
         insemination: insemination._id,
         type: 'pregnancy_check',
         status: { $in: ['pending', 'sent'] },
@@ -350,6 +356,7 @@ class NotificationService {
       const animalName = animal.nickName || animal.serialNumber;
 
       await this.create({
+        userId,
         animalId: animal._id.toString(),
         inseminationId: insemination._id.toString(),
         type: 'pregnancy_check',
@@ -374,20 +381,25 @@ class NotificationService {
   /**
    * Get notification statistics
    */
-  async getStatistics(): Promise<{
+  async getStatistics(userId: string): Promise<{
     total: number;
     byStatus: Record<string, number>;
     byType: Record<string, number>;
     byChannel: Record<string, number>;
   }> {
+    const userIdObj = new mongoose.Types.ObjectId(userId);
+    
     const [byStatusResult, byTypeResult, byChannelResult] = await Promise.all([
       Notification.aggregate([
+        { $match: { userId: userIdObj } },
         { $group: { _id: '$status', count: { $sum: 1 } } },
       ]),
       Notification.aggregate([
+        { $match: { userId: userIdObj } },
         { $group: { _id: '$type', count: { $sum: 1 } } },
       ]),
       Notification.aggregate([
+        { $match: { userId: userIdObj } },
         { $group: { _id: '$channel', count: { $sum: 1 } } },
       ]),
     ]);

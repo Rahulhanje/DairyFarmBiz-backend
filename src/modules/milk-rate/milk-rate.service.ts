@@ -29,6 +29,7 @@ const getUTCEndOfDay = (date: Date | string): Date => {
 };
 
 export interface CreateMilkRateData {
+  userId: string;
   animalType: AnimalType;
   ratePerLiter: number;
   effectiveFrom: Date;
@@ -44,6 +45,7 @@ class MilkRateService {
 
     // Check if rate already exists for this animalType and effectiveFrom date
     const existingRate = await MilkRate.findOne({
+      userId: data.userId,
       animalType: data.animalType,
       effectiveFrom: effectiveDate,
     });
@@ -73,10 +75,11 @@ class MilkRateService {
    * Get applicable rate for a specific date and animal type
    * Returns the most recent rate that is effective on or before the given date
    */
-  async getRateByDate(animalType: AnimalType, date: Date): Promise<IMilkRate> {
+  async getRateByDate(userId: string, animalType: AnimalType, date: Date): Promise<IMilkRate> {
     const queryDate = getUTCEndOfDay(date);
 
     const rate = await MilkRate.findOne({
+      userId,
       animalType,
       effectiveFrom: { $lte: queryDate },
     }).sort({ effectiveFrom: -1 });
@@ -93,21 +96,21 @@ class MilkRateService {
   /**
    * Get all rates for an animal type (sorted by effectiveFrom desc)
    */
-  async getAllByType(animalType: AnimalType): Promise<IMilkRate[]> {
-    return MilkRate.find({ animalType }).sort({ effectiveFrom: -1 });
+  async getAllByType(userId: string, animalType: AnimalType): Promise<IMilkRate[]> {
+    return MilkRate.find({ userId, animalType }).sort({ effectiveFrom: -1 });
   }
 
   /**
    * Get all rates (sorted by effectiveFrom desc)
    */
-  async getAll(): Promise<IMilkRate[]> {
-    return MilkRate.find().sort({ effectiveFrom: -1, animalType: 1 });
+  async getAll(userId: string): Promise<IMilkRate[]> {
+    return MilkRate.find({ userId }).sort({ effectiveFrom: -1, animalType: 1 });
   }
 
   /**
    * Get current rates for both cow and buffalo
    */
-  async getCurrentRates(): Promise<{
+  async getCurrentRates(userId: string): Promise<{
     cow: IMilkRate | null;
     buffalo: IMilkRate | null;
   }> {
@@ -118,10 +121,12 @@ class MilkRateService {
 
     const [cowRate, buffaloRate] = await Promise.all([
       MilkRate.findOne({
+        userId,
         animalType: 'cow',
         effectiveFrom: { $lte: today },
       }).sort({ effectiveFrom: -1 }),
       MilkRate.findOne({
+        userId,
         animalType: 'buffalo',
         effectiveFrom: { $lte: today },
       }).sort({ effectiveFrom: -1 }),
@@ -136,8 +141,8 @@ class MilkRateService {
   /**
    * Get rate by ID (for reference only)
    */
-  async getById(id: string): Promise<IMilkRate> {
-    const rate = await MilkRate.findById(id);
+  async getById(userId: string, id: string): Promise<IMilkRate> {
+    const rate = await MilkRate.findOne({ _id: id, userId });
 
     if (!rate) {
       throw new NotFoundError('Milk rate not found');
@@ -151,8 +156,8 @@ class MilkRateService {
    * Only allows updating the rate per liter, not the date or animal type
    * Also recalculates affected milk collections
    */
-  async update(id: string, ratePerLiter: number): Promise<IMilkRate> {
-    const rate = await MilkRate.findById(id);
+  async update(userId: string, id: string, ratePerLiter: number): Promise<IMilkRate> {
+    const rate = await MilkRate.findOne({ _id: id, userId });
 
     if (!rate) {
       throw new NotFoundError('Milk rate not found');
@@ -171,8 +176,8 @@ class MilkRateService {
   /**
    * Delete a milk rate
    */
-  async delete(id: string): Promise<IMilkRate> {
-    const rate = await MilkRate.findByIdAndDelete(id);
+  async delete(userId: string, id: string): Promise<IMilkRate> {
+    const rate = await MilkRate.findOneAndDelete({ _id: id, userId });
 
     if (!rate) {
       throw new NotFoundError('Milk rate not found');

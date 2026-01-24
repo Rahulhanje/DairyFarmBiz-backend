@@ -3,6 +3,7 @@ import { AnimalType, MilkSession } from '../../types';
 
 export interface IMilkCollection extends Document {
   _id: mongoose.Types.ObjectId;
+  userId: mongoose.Types.ObjectId;
   date: Date;
   session: MilkSession;
   animalType: AnimalType;
@@ -16,6 +17,12 @@ export interface IMilkCollection extends Document {
 
 const milkCollectionSchema = new Schema<IMilkCollection>(
   {
+    userId: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      required: [true, 'User ID is required'],
+      index: true,
+    },
     date: {
       type: Date,
       required: [true, 'Date is required'],

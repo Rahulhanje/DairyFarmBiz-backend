@@ -1,4 +1,5 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
+import { AuthRequest } from '../../types';
 import { expenseService } from './expense.service';
 import { asyncHandler } from '../../utils/asyncHandler';
 import { sendSuccess, sendCreated, sendPaginated } from '../../utils/responseHandler';
@@ -9,10 +10,11 @@ import { ExpenseCategory } from '../../types';
  * @route   POST /api/v1/expenses
  * @access  Private
  */
-export const createExpense = asyncHandler(async (req: Request, res: Response) => {
+export const createExpense = asyncHandler(async (req: AuthRequest, res: Response) => {
   const { name, amount, date, category, notes } = req.body;
 
-  const expense = await expenseService.create({
+  const expense = await expenseService.create(req.user?.id!, {
+    userId: req.user?.id!,
     name,
     amount,
     date: date ? new Date(date) : undefined,
@@ -28,7 +30,7 @@ export const createExpense = asyncHandler(async (req: Request, res: Response) =>
  * @route   GET /api/v1/expenses
  * @access  Private
  */
-export const getExpenses = asyncHandler(async (req: Request, res: Response) => {
+export const getExpenses = asyncHandler(async (req: AuthRequest, res: Response) => {
   const page = parseInt(req.query.page as string) || 1;
   const limit = parseInt(req.query.limit as string) || 10;
   const startDate = req.query.startDate ? new Date(req.query.startDate as string) : undefined;
@@ -37,6 +39,7 @@ export const getExpenses = asyncHandler(async (req: Request, res: Response) => {
   const search = req.query.search as string | undefined;
 
   const { expenses, total } = await expenseService.getAll(
+    req.user?.id!,
     { startDate, endDate, category, search },
     page,
     limit
@@ -50,8 +53,8 @@ export const getExpenses = asyncHandler(async (req: Request, res: Response) => {
  * @route   GET /api/v1/expenses/:id
  * @access  Private
  */
-export const getExpense = asyncHandler(async (req: Request, res: Response) => {
-  const expense = await expenseService.getById(req.params.id);
+export const getExpense = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const expense = await expenseService.getById(req.user?.id!, req.params.id);
   sendSuccess(res, expense, 'Expense fetched successfully');
 });
 
@@ -60,10 +63,10 @@ export const getExpense = asyncHandler(async (req: Request, res: Response) => {
  * @route   PUT /api/v1/expenses/:id
  * @access  Private
  */
-export const updateExpense = asyncHandler(async (req: Request, res: Response) => {
+export const updateExpense = asyncHandler(async (req: AuthRequest, res: Response) => {
   const { name, amount, date, category, notes } = req.body;
 
-  const expense = await expenseService.update(req.params.id, {
+  const expense = await expenseService.update(req.user?.id!, req.params.id, {
     name,
     amount,
     date: date ? new Date(date) : undefined,
@@ -79,8 +82,8 @@ export const updateExpense = asyncHandler(async (req: Request, res: Response) =>
  * @route   DELETE /api/v1/expenses/:id
  * @access  Private
  */
-export const deleteExpense = asyncHandler(async (req: Request, res: Response) => {
-  const expense = await expenseService.delete(req.params.id);
+export const deleteExpense = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const expense = await expenseService.delete(req.user?.id!, req.params.id);
   sendSuccess(res, expense, 'Expense deleted successfully');
 });
 
@@ -89,7 +92,7 @@ export const deleteExpense = asyncHandler(async (req: Request, res: Response) =>
  * @route   GET /api/v1/expenses/total
  * @access  Private
  */
-export const getExpensesTotal = asyncHandler(async (req: Request, res: Response) => {
+export const getExpensesTotal = asyncHandler(async (req: AuthRequest, res: Response) => {
   const startDate = req.query.startDate 
     ? new Date(req.query.startDate as string) 
     : new Date(new Date().setMonth(new Date().getMonth() - 1));
@@ -97,7 +100,7 @@ export const getExpensesTotal = asyncHandler(async (req: Request, res: Response)
     ? new Date(req.query.endDate as string) 
     : new Date();
 
-  const result = await expenseService.getTotalByDateRange(startDate, endDate);
+  const result = await expenseService.getTotalByDateRange(req.user?.id!, startDate, endDate);
 
   sendSuccess(res, result, 'Expenses total fetched successfully');
 });
@@ -107,7 +110,7 @@ export const getExpensesTotal = asyncHandler(async (req: Request, res: Response)
  * @route   GET /api/v1/expenses/summary
  * @access  Private
  */
-export const getExpensesSummary = asyncHandler(async (_req: Request, res: Response) => {
-  const summary = await expenseService.getSummaryByCategory();
+export const getExpensesSummary = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const summary = await expenseService.getSummaryByCategory(req.user?.id!);
   sendSuccess(res, summary, 'Expenses summary fetched successfully');
 });

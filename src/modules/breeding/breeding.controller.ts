@@ -1,6 +1,7 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import { AuthRequest } from '../../types';
 import { breedingService } from './breeding.service';
+import { User } from '../auth/user.model';
 import { asyncHandler } from '../../utils/asyncHandler';
 import { sendSuccess, sendCreated, sendPaginated } from '../../utils/responseHandler';
 import { PregnancyStatus } from '../../types';
@@ -13,14 +14,20 @@ import { PregnancyStatus } from '../../types';
 export const createInsemination = asyncHandler(async (req: AuthRequest, res: Response) => {
   const { animalId, inseminationDate, doctorName, semenType, breed, notes } = req.body;
 
+  // Get user's full details including phone
+  const user = await User.findById(req.user?.id);
+  const userPhone = user?.phone && user?.countryCode ? `${user.countryCode}${user.phone}` : undefined;
+
   const insemination = await breedingService.create({
+    userId: req.user?.id!,
     animalId,
     inseminationDate: new Date(inseminationDate),
     doctorName,
     semenType,
     breed,
     notes,
-    userEmail: req.user?.email, // Pass the logged-in user's email
+    userEmail: req.user?.email,
+    userPhone, // Pass WhatsApp number in format: +919876543210
   });
 
   sendCreated(res, insemination, 'Insemination record created successfully');
@@ -31,7 +38,7 @@ export const createInsemination = asyncHandler(async (req: AuthRequest, res: Res
  * @route   GET /api/v1/breeding
  * @access  Private
  */
-export const getInseminations = asyncHandler(async (req: Request, res: Response) => {
+export const getInseminations = asyncHandler(async (req: AuthRequest, res: Response) => {
   const page = parseInt(req.query.page as string) || 1;
   const limit = parseInt(req.query.limit as string) || 10;
   const animalId = req.query.animalId as string | undefined;
@@ -40,6 +47,7 @@ export const getInseminations = asyncHandler(async (req: Request, res: Response)
   const endDate = req.query.endDate ? new Date(req.query.endDate as string) : undefined;
 
   const { inseminations, total } = await breedingService.getAll(
+    req.user?.id!,
     { animalId, status, startDate, endDate },
     page,
     limit
@@ -53,8 +61,8 @@ export const getInseminations = asyncHandler(async (req: Request, res: Response)
  * @route   GET /api/v1/breeding/:id
  * @access  Private
  */
-export const getInsemination = asyncHandler(async (req: Request, res: Response) => {
-  const insemination = await breedingService.getById(req.params.id);
+export const getInsemination = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const insemination = await breedingService.getById(req.params.id, req.user?.id!);
   sendSuccess(res, insemination, 'Insemination record fetched successfully');
 });
 
@@ -63,8 +71,8 @@ export const getInsemination = asyncHandler(async (req: Request, res: Response) 
  * @route   GET /api/v1/breeding/animal/:animalId
  * @access  Private
  */
-export const getInseminationsByAnimal = asyncHandler(async (req: Request, res: Response) => {
-  const inseminations = await breedingService.getByAnimalId(req.params.animalId);
+export const getInseminationsByAnimal = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const inseminations = await breedingService.getByAnimalId(req.params.animalId, req.user?.id!);
   sendSuccess(res, inseminations, 'Insemination records fetched successfully');
 });
 
@@ -73,10 +81,10 @@ export const getInseminationsByAnimal = asyncHandler(async (req: Request, res: R
  * @route   PUT /api/v1/breeding/:id
  * @access  Private
  */
-export const updateInsemination = asyncHandler(async (req: Request, res: Response) => {
+export const updateInsemination = asyncHandler(async (req: AuthRequest, res: Response) => {
   const { inseminationDate, doctorName, semenType, breed, notes } = req.body;
 
-  const insemination = await breedingService.update(req.params.id, {
+  const insemination = await breedingService.update(req.params.id, req.user?.id!, {
     inseminationDate: inseminationDate ? new Date(inseminationDate) : undefined,
     doctorName,
     semenType,
@@ -92,10 +100,10 @@ export const updateInsemination = asyncHandler(async (req: Request, res: Respons
  * @route   PATCH /api/v1/breeding/:id/status
  * @access  Private
  */
-export const updatePregnancyStatus = asyncHandler(async (req: Request, res: Response) => {
+export const updatePregnancyStatus = asyncHandler(async (req: AuthRequest, res: Response) => {
   const { status, deliveryDate, notes } = req.body;
 
-  const insemination = await breedingService.updateStatus(req.params.id, {
+  const insemination = await breedingService.updateStatus(req.params.id, req.user?.id!, {
     status,
     deliveryDate: deliveryDate ? new Date(deliveryDate) : undefined,
     notes,
@@ -109,8 +117,8 @@ export const updatePregnancyStatus = asyncHandler(async (req: Request, res: Resp
  * @route   DELETE /api/v1/breeding/:id
  * @access  Private
  */
-export const deleteInsemination = asyncHandler(async (req: Request, res: Response) => {
-  const insemination = await breedingService.delete(req.params.id);
+export const deleteInsemination = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const insemination = await breedingService.delete(req.params.id, req.user?.id!);
   sendSuccess(res, insemination, 'Insemination record deleted successfully');
 });
 
@@ -119,8 +127,8 @@ export const deleteInsemination = asyncHandler(async (req: Request, res: Respons
  * @route   GET /api/v1/breeding/pending-checks
  * @access  Private
  */
-export const getPendingChecks = asyncHandler(async (_req: Request, res: Response) => {
-  const inseminations = await breedingService.getPendingPregnancyChecks();
+export const getPendingChecks = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const inseminations = await breedingService.getPendingPregnancyChecks(req.user?.id!);
   sendSuccess(res, inseminations, 'Pending pregnancy checks fetched successfully');
 });
 
@@ -129,7 +137,7 @@ export const getPendingChecks = asyncHandler(async (_req: Request, res: Response
  * @route   GET /api/v1/breeding/statistics
  * @access  Private
  */
-export const getStatistics = asyncHandler(async (_req: Request, res: Response) => {
-  const statistics = await breedingService.getStatistics();
+export const getStatistics = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const statistics = await breedingService.getStatistics(req.user?.id!);
   sendSuccess(res, statistics, 'Pregnancy statistics fetched successfully');
 });

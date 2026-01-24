@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import { pregnancyStatusService } from './pregnancy-status.service';
 import { asyncHandler } from '../../utils/asyncHandler';
 import { sendSuccess, sendCreated, sendPaginated } from '../../utils/responseHandler';
@@ -13,6 +13,7 @@ export const addStatus = asyncHandler(async (req: AuthRequest, res: Response) =>
   const { inseminationId, status, notes, deliveryDate, calfCount, calfDetails } = req.body;
 
   const statusHistory = await pregnancyStatusService.addStatus({
+    userId: req.user?.id!,
     inseminationId,
     status,
     notes,
@@ -30,8 +31,9 @@ export const addStatus = asyncHandler(async (req: AuthRequest, res: Response) =>
  * @route   GET /api/v1/pregnancy-status/insemination/:inseminationId
  * @access  Private
  */
-export const getTimelineByInsemination = asyncHandler(async (req: Request, res: Response) => {
+export const getTimelineByInsemination = asyncHandler(async (req: AuthRequest, res: Response) => {
   const timeline = await pregnancyStatusService.getTimelineByInsemination(
+    req.user?.id!,
     req.params.inseminationId
   );
   sendSuccess(res, timeline, 'Status timeline fetched successfully');
@@ -42,8 +44,11 @@ export const getTimelineByInsemination = asyncHandler(async (req: Request, res: 
  * @route   GET /api/v1/pregnancy-status/animal/:animalId
  * @access  Private
  */
-export const getHistoryByAnimal = asyncHandler(async (req: Request, res: Response) => {
-  const history = await pregnancyStatusService.getHistoryByAnimal(req.params.animalId);
+export const getHistoryByAnimal = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const history = await pregnancyStatusService.getHistoryByAnimal(
+    req.user?.id!,
+    req.params.animalId
+  );
   sendSuccess(res, history, 'Status history fetched successfully');
 });
 
@@ -52,7 +57,7 @@ export const getHistoryByAnimal = asyncHandler(async (req: Request, res: Respons
  * @route   GET /api/v1/pregnancy-status
  * @access  Private
  */
-export const getAllHistory = asyncHandler(async (req: Request, res: Response) => {
+export const getAllHistory = asyncHandler(async (req: AuthRequest, res: Response) => {
   const page = parseInt(req.query.page as string) || 1;
   const limit = parseInt(req.query.limit as string) || 10;
   const inseminationId = req.query.inseminationId as string | undefined;
@@ -62,6 +67,7 @@ export const getAllHistory = asyncHandler(async (req: Request, res: Response) =>
   const endDate = req.query.endDate ? new Date(req.query.endDate as string) : undefined;
 
   const { history, total } = await pregnancyStatusService.getAll(
+    req.user?.id!,
     { inseminationId, animalId, status, startDate, endDate },
     page,
     limit
@@ -75,8 +81,11 @@ export const getAllHistory = asyncHandler(async (req: Request, res: Response) =>
  * @route   GET /api/v1/pregnancy-status/current/:inseminationId
  * @access  Private
  */
-export const getCurrentStatus = asyncHandler(async (req: Request, res: Response) => {
-  const result = await pregnancyStatusService.getCurrentStatus(req.params.inseminationId);
+export const getCurrentStatus = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const result = await pregnancyStatusService.getCurrentStatus(
+    req.user?.id!,
+    req.params.inseminationId
+  );
   sendSuccess(res, result, 'Current status fetched successfully');
 });
 
@@ -85,8 +94,8 @@ export const getCurrentStatus = asyncHandler(async (req: Request, res: Response)
  * @route   GET /api/v1/pregnancy-status/statistics
  * @access  Private
  */
-export const getStatistics = asyncHandler(async (_req: Request, res: Response) => {
-  const statistics = await pregnancyStatusService.getStatistics();
+export const getStatistics = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const statistics = await pregnancyStatusService.getStatistics(req.user?.id!);
   sendSuccess(res, statistics, 'Status statistics fetched successfully');
 });
 

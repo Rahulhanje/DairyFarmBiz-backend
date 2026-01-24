@@ -3,6 +3,7 @@ import { PregnancyStatus } from '../../types';
 
 export interface IPregnancyStatusHistory extends Document {
   _id: mongoose.Types.ObjectId;
+  userId: mongoose.Types.ObjectId;
   insemination: mongoose.Types.ObjectId;
   animal: mongoose.Types.ObjectId;
   status: PregnancyStatus;
@@ -20,6 +21,12 @@ export interface IPregnancyStatusHistory extends Document {
 
 const pregnancyStatusHistorySchema = new Schema<IPregnancyStatusHistory>(
   {
+    userId: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      required: [true, 'User ID is required'],
+      index: true,
+    },
     insemination: {
       type: Schema.Types.ObjectId,
       ref: 'Insemination',
@@ -79,9 +86,9 @@ const pregnancyStatusHistorySchema = new Schema<IPregnancyStatusHistory>(
 );
 
 // Indexes for common queries
-pregnancyStatusHistorySchema.index({ insemination: 1, changedAt: -1 });
-pregnancyStatusHistorySchema.index({ animal: 1, changedAt: -1 });
-pregnancyStatusHistorySchema.index({ status: 1 });
+pregnancyStatusHistorySchema.index({ userId: 1, insemination: 1, changedAt: -1 });
+pregnancyStatusHistorySchema.index({ userId: 1, animal: 1, changedAt: -1 });
+pregnancyStatusHistorySchema.index({ userId: 1, status: 1 });
 
 export const PregnancyStatusHistory = mongoose.model<IPregnancyStatusHistory>(
   'PregnancyStatusHistory',

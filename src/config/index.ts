@@ -22,4 +22,8 @@ export const config = {
   emailFrom: process.env.EMAIL_FROM || 'noreply@dairyfarm.com',
   emailFromName: process.env.EMAIL_FROM_NAME || 'Dairy Farm Management',
   notificationEmail: process.env.NOTIFICATION_EMAIL || '',
+
+  // Meta Cloud API (WhatsApp Business API - Free tier: 1000 messages/month)
+  metaPhoneNumberId: process.env.META_PHONE_NUMBER_ID || '',
+  metaAccessToken: process.env.META_ACCESS_TOKEN || '',
 };

@@ -3,6 +3,7 @@ import { AnimalType } from '../../types';
 
 export interface IMilkRate extends Document {
   _id: mongoose.Types.ObjectId;
+  userId: mongoose.Types.ObjectId;
   animalType: AnimalType;
   ratePerLiter: number;
   effectiveFrom: Date;
@@ -12,6 +13,12 @@ export interface IMilkRate extends Document {
 
 const milkRateSchema = new Schema<IMilkRate>(
   {
+    userId: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      required: [true, 'User ID is required'],
+      index: true,
+    },
     animalType: {
       type: String,
       required: [true, 'Animal type is required'],

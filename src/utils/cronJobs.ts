@@ -4,6 +4,7 @@ import { Notification } from '../modules/notification/notification.model';
 import { Insemination } from '../modules/breeding';
 import { Animal } from '../modules/animal';
 import { emailService } from '../modules/notification/email.service';
+import { whatsAppService } from '../modules/notification/whatsapp.service';
 import mongoose from 'mongoose';
 
 class CronJobService {
@@ -106,7 +107,7 @@ class CronJobService {
               notification.isSent = true;
               notification.sentAt = new Date();
               await notification.save();
-              console.log(`✉️ Sent notification ${notification._id} to ${notification.recipientEmail}`);
+              console.log(`✉️ Sent email notification ${notification._id} to ${notification.recipientEmail}`);
               result.sent++;
             } else {
               notification.retryCount += 1;
@@ -114,7 +115,29 @@ class CronJobService {
 
               if (notification.retryCount >= notification.maxRetries) {
                 notification.status = 'failed';
-                console.log(`❌ Notification ${notification._id} failed after max retries`);
+                console.log(`❌ Email notification ${notification._id} failed after max retries`);
+              }
+
+              await notification.save();
+              result.failed++;
+            }
+          } else if (notification.channel === 'whatsapp') {
+            const sendResult = await this.sendWhatsAppNotification(notification);
+
+            if (sendResult.success) {
+              notification.status = 'sent';
+              notification.isSent = true;
+              notification.sentAt = new Date();
+              await notification.save();
+              console.log(`📱 Sent WhatsApp notification ${notification._id} to ${notification.recipientPhone}`);
+              result.sent++;
+            } else {
+              notification.retryCount += 1;
+              notification.lastError = sendResult.error;
+
+              if (notification.retryCount >= notification.maxRetries) {
+                notification.status = 'failed';
+                console.log(`❌ WhatsApp notification ${notification._id} failed after max retries`);
               }
 
               await notification.save();
@@ -193,6 +216,11 @@ class CronJobService {
       return 'No recipient email specified';
     }
 
+    // Check if no recipient phone for whatsapp channel
+    if (notification.channel === 'whatsapp' && !notification.recipientPhone) {
+      return 'No recipient phone specified';
+    }
+
     return null;
   }
 
@@ -225,16 +253,50 @@ class CronJobService {
       }
 
       // For other notifications, use generic email
-      return emailService.sendGeneralNotification(
-        notification.recipientEmail,
-        notification.subject || 'Dairy Farm Notification',
-        notification.message
-      );
+      return emailService.sendEmail({
+        to: notification.recipientEmail,
+        subject: notification.subject || 'Notification',
+        text: notification.message,
+      });
     } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Failed to send email',
-      };
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    }
+  }
+
+  /**
+   * Send WhatsApp notification
+   */
+  private async sendWhatsAppNotification(notification: any): Promise<{ success: boolean; error?: string }> {
+    if (!whatsAppService.isReady()) {
+      return { success: false, error: 'WhatsApp service is not configured' };
+    }
+
+    try {
+      // For pregnancy check notifications, use the formatted template
+      if (notification.type === 'pregnancy_check' && notification.animal && notification.insemination) {
+        const animal = await Animal.findById(notification.animal._id || notification.animal);
+        const insemination = await Insemination.findById(notification.insemination._id || notification.insemination);
+
+        if (animal && insemination) {
+          return whatsAppService.sendPregnancyCheckReminder(
+            notification.recipientPhone,
+            {
+              serialNumber: animal.serialNumber,
+              nickName: animal.nickName,
+              animalType: animal.animalType,
+            },
+            insemination.inseminationDate
+          );
+        }
+      }
+
+      // For other notifications, use generic WhatsApp message
+      return whatsAppService.sendMessage({
+        to: notification.recipientPhone,
+        message: notification.message,
+      });
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
     }
   }
 
@@ -293,6 +355,7 @@ class CronJobService {
         const animalName = animal.nickName || animal.serialNumber;
 
         await Notification.create({
+          userId: insemination.userId,
           animal: animal._id,
           insemination: insemination._id,
           type: 'pregnancy_check',

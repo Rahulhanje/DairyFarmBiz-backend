@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import { notificationService } from './notification.service';
 import { emailService } from './email.service';
 import { AuthRequest } from '../../types';
@@ -12,7 +12,7 @@ import { NotificationStatus, NotificationType, NotificationChannel } from './not
  * @route   POST /api/v1/notifications
  * @access  Private
  */
-export const createNotification = asyncHandler(async (req: Request, res: Response) => {
+export const createNotification = asyncHandler(async (req: AuthRequest, res: Response) => {
   const {
     animalId,
     inseminationId,
@@ -26,6 +26,7 @@ export const createNotification = asyncHandler(async (req: Request, res: Respons
   } = req.body;
 
   const notification = await notificationService.create({
+    userId: req.user?.id!,
     animalId,
     inseminationId,
     type,
@@ -45,8 +46,8 @@ export const createNotification = asyncHandler(async (req: Request, res: Respons
  * @route   GET /api/v1/notifications/:id
  * @access  Private
  */
-export const getNotificationById = asyncHandler(async (req: Request, res: Response) => {
-  const notification = await notificationService.getById(req.params.id);
+export const getNotificationById = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const notification = await notificationService.getById(req.params.id, req.user?.id!);
   sendSuccess(res, notification, 'Notification fetched successfully');
 });
 
@@ -55,10 +56,10 @@ export const getNotificationById = asyncHandler(async (req: Request, res: Respon
  * @route   PUT /api/v1/notifications/:id
  * @access  Private
  */
-export const updateNotification = asyncHandler(async (req: Request, res: Response) => {
+export const updateNotification = asyncHandler(async (req: AuthRequest, res: Response) => {
   const { scheduledDate, message, subject, recipientEmail, recipientPhone, status } = req.body;
 
-  const notification = await notificationService.update(req.params.id, {
+  const notification = await notificationService.update(req.params.id, req.user?.id!, {
     scheduledDate: scheduledDate ? new Date(scheduledDate) : undefined,
     message,
     subject,
@@ -75,8 +76,8 @@ export const updateNotification = asyncHandler(async (req: Request, res: Respons
  * @route   PATCH /api/v1/notifications/:id/cancel
  * @access  Private
  */
-export const cancelNotification = asyncHandler(async (req: Request, res: Response) => {
-  const notification = await notificationService.cancel(req.params.id);
+export const cancelNotification = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const notification = await notificationService.cancel(req.params.id, req.user?.id!);
   sendSuccess(res, notification, 'Notification cancelled successfully');
 });
 
@@ -85,8 +86,8 @@ export const cancelNotification = asyncHandler(async (req: Request, res: Respons
  * @route   DELETE /api/v1/notifications/:id
  * @access  Private
  */
-export const deleteNotification = asyncHandler(async (req: Request, res: Response) => {
-  await notificationService.delete(req.params.id);
+export const deleteNotification = asyncHandler(async (req: AuthRequest, res: Response) => {
+  await notificationService.delete(req.params.id, req.user?.id!);
   sendNoContent(res);
 });
 
@@ -95,7 +96,7 @@ export const deleteNotification = asyncHandler(async (req: Request, res: Respons
  * @route   GET /api/v1/notifications
  * @access  Private
  */
-export const getAllNotifications = asyncHandler(async (req: Request, res: Response) => {
+export const getAllNotifications = asyncHandler(async (req: AuthRequest, res: Response) => {
   const page = parseInt(req.query.page as string) || 1;
   const limit = parseInt(req.query.limit as string) || 10;
   const status = req.query.status as NotificationStatus | undefined;
@@ -107,6 +108,7 @@ export const getAllNotifications = asyncHandler(async (req: Request, res: Respon
   const endDate = req.query.endDate ? new Date(req.query.endDate as string) : undefined;
 
   const { notifications, total } = await notificationService.getAll(
+    req.user?.id!,
     { status, type, channel, animalId, inseminationId, startDate, endDate },
     page,
     limit
@@ -138,7 +140,7 @@ export const sendNotification = asyncHandler(async (req: AuthRequest, res: Respo
  * @route   POST /api/v1/notifications/process-pending
  * @access  Private
  */
-export const processPendingNotifications = asyncHandler(async (_req: Request, res: Response) => {
+export const processPendingNotifications = asyncHandler(async (_req: AuthRequest, res: Response) => {
   const result = await notificationService.processPendingNotifications();
   sendSuccess(res, result, 'Pending notifications processed');
 });
@@ -148,9 +150,9 @@ export const processPendingNotifications = asyncHandler(async (_req: Request, re
  * @route   POST /api/v1/notifications/pregnancy-reminders
  * @access  Private
  */
-export const createPregnancyReminders = asyncHandler(async (req: Request, res: Response) => {
+export const createPregnancyReminders = asyncHandler(async (req: AuthRequest, res: Response) => {
   const { recipientEmail } = req.body;
-  const created = await notificationService.createPregnancyCheckReminders(recipientEmail);
+  const created = await notificationService.createPregnancyCheckReminders(req.user?.id!, recipientEmail);
   sendSuccess(res, { created }, `Created ${created} pregnancy check reminder(s)`);
 });
 
@@ -159,8 +161,8 @@ export const createPregnancyReminders = asyncHandler(async (req: Request, res: R
  * @route   GET /api/v1/notifications/statistics
  * @access  Private
  */
-export const getStatistics = asyncHandler(async (_req: Request, res: Response) => {
-  const statistics = await notificationService.getStatistics();
+export const getStatistics = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const statistics = await notificationService.getStatistics(req.user?.id!);
   sendSuccess(res, statistics, 'Notification statistics fetched successfully');
 });
 
@@ -169,7 +171,7 @@ export const getStatistics = asyncHandler(async (_req: Request, res: Response) =
  * @route   GET /api/v1/notifications/email-status
  * @access  Private
  */
-export const getEmailStatus = asyncHandler(async (_req: Request, res: Response) => {
+export const getEmailStatus = asyncHandler(async (_req: AuthRequest, res: Response) => {
   const isReady = emailService.isReady();
   const isConnected = isReady ? await emailService.verifyConnection() : false;
 
@@ -184,7 +186,7 @@ export const getEmailStatus = asyncHandler(async (_req: Request, res: Response) 
  * @route   POST /api/v1/notifications/test-email
  * @access  Private
  */
-export const sendTestEmail = asyncHandler(async (req: Request, res: Response) => {
+export const sendTestEmail = asyncHandler(async (req: AuthRequest, res: Response) => {
   const { to, subject, message } = req.body;
 
   const result = await emailService.sendGeneralNotification(
@@ -205,7 +207,7 @@ export const sendTestEmail = asyncHandler(async (req: Request, res: Response) =>
  * @route   GET /api/v1/notifications/cron-status
  * @access  Private
  */
-export const getCronStatus = asyncHandler(async (_req: Request, res: Response) => {
+export const getCronStatus = asyncHandler(async (_req: AuthRequest, res: Response) => {
   const status = cronJobService.getStatus();
   sendSuccess(res, status, 'Cron job status fetched');
 });
@@ -215,7 +217,7 @@ export const getCronStatus = asyncHandler(async (_req: Request, res: Response) =
  * @route   POST /api/v1/notifications/run-cron
  * @access  Private
  */
-export const runCronManually = asyncHandler(async (_req: Request, res: Response) => {
+export const runCronManually = asyncHandler(async (_req: AuthRequest, res: Response) => {
   const result = await cronJobService.runDailyNotificationJob();
   sendSuccess(res, result, 'Cron job executed successfully');
 });
@@ -233,6 +235,7 @@ export const createImmediateTestNotification = asyncHandler(async (req: AuthRequ
   }
 
   const notification = await notificationService.create({
+    userId: req.user?.id!,
     type: 'pregnancy_check',
     channel: 'email',
     scheduledDate: new Date(), // Schedule for right now

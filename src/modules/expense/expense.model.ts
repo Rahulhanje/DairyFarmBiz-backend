@@ -3,6 +3,7 @@ import { ExpenseCategory } from '../../types';
 
 export interface IExpense extends Document {
   _id: mongoose.Types.ObjectId;
+  userId: mongoose.Types.ObjectId;
   name: string;
   amount: number;
   date: Date;
@@ -14,6 +15,12 @@ export interface IExpense extends Document {
 
 const expenseSchema = new Schema<IExpense>(
   {
+    userId: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      required: [true, 'User ID is required'],
+      index: true,
+    },
     name: {
       type: String,
       required: [true, 'Expense name is required'],

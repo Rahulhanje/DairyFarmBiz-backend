@@ -1,18 +1,19 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import { milkRateService } from './milk-rate.service';
 import { asyncHandler } from '../../utils/asyncHandler';
 import { sendSuccess, sendCreated } from '../../utils/responseHandler';
-import { AnimalType } from '../../types';
+import { AnimalType, AuthRequest } from '../../types';
 
 /**
  * @desc    Create new milk rate
  * @route   POST /api/v1/milk-rates
  * @access  Private
  */
-export const createMilkRate = asyncHandler(async (req: Request, res: Response) => {
+export const createMilkRate = asyncHandler(async (req: AuthRequest, res: Response) => {
   const { animalType, ratePerLiter, effectiveFrom } = req.body;
 
   const rate = await milkRateService.create({
+    userId: req.user?.id!,
     animalType,
     ratePerLiter,
     effectiveFrom: new Date(effectiveFrom),
@@ -26,11 +27,11 @@ export const createMilkRate = asyncHandler(async (req: Request, res: Response) =
  * @route   GET /api/v1/milk-rates/by-date
  * @access  Private
  */
-export const getRateByDate = asyncHandler(async (req: Request, res: Response) => {
+export const getRateByDate = asyncHandler(async (req: AuthRequest, res: Response) => {
   const animalType = req.query.animalType as AnimalType;
   const date = new Date(req.query.date as string);
 
-  const rate = await milkRateService.getRateByDate(animalType, date);
+  const rate = await milkRateService.getRateByDate(req.user?.id!, animalType, date);
 
   sendSuccess(res, rate, 'Milk rate fetched successfully');
 });
@@ -40,14 +41,14 @@ export const getRateByDate = asyncHandler(async (req: Request, res: Response) =>
  * @route   GET /api/v1/milk-rates
  * @access  Private
  */
-export const getAllRates = asyncHandler(async (req: Request, res: Response) => {
+export const getAllRates = asyncHandler(async (req: AuthRequest, res: Response) => {
   const animalType = req.query.animalType as AnimalType | undefined;
 
   let rates;
   if (animalType) {
-    rates = await milkRateService.getAllByType(animalType);
+    rates = await milkRateService.getAllByType(req.user?.id!, animalType);
   } else {
-    rates = await milkRateService.getAll();
+    rates = await milkRateService.getAll(req.user?.id!);
   }
 
   sendSuccess(res, rates, 'Milk rates fetched successfully');
@@ -58,8 +59,8 @@ export const getAllRates = asyncHandler(async (req: Request, res: Response) => {
  * @route   GET /api/v1/milk-rates/current
  * @access  Private
  */
-export const getCurrentRates = asyncHandler(async (_req: Request, res: Response) => {
-  const rates = await milkRateService.getCurrentRates();
+export const getCurrentRates = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const rates = await milkRateService.getCurrentRates(req.user?.id!);
 
   sendSuccess(res, rates, 'Current milk rates fetched successfully');
 });
@@ -69,8 +70,8 @@ export const getCurrentRates = asyncHandler(async (_req: Request, res: Response)
  * @route   GET /api/v1/milk-rates/:id
  * @access  Private
  */
-export const getRateById = asyncHandler(async (req: Request, res: Response) => {
-  const rate = await milkRateService.getById(req.params.id);
+export const getRateById = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const rate = await milkRateService.getById(req.user?.id!, req.params.id);
 
   sendSuccess(res, rate, 'Milk rate fetched successfully');
 });
@@ -80,9 +81,9 @@ export const getRateById = asyncHandler(async (req: Request, res: Response) => {
  * @route   PUT /api/v1/milk-rates/:id
  * @access  Private
  */
-export const updateMilkRate = asyncHandler(async (req: Request, res: Response) => {
+export const updateMilkRate = asyncHandler(async (req: AuthRequest, res: Response) => {
   const { ratePerLiter } = req.body;
-  const rate = await milkRateService.update(req.params.id, ratePerLiter);
+  const rate = await milkRateService.update(req.user?.id!, req.params.id, ratePerLiter);
 
   sendSuccess(res, rate, 'Milk rate updated successfully');
 });
@@ -92,8 +93,8 @@ export const updateMilkRate = asyncHandler(async (req: Request, res: Response) =
  * @route   DELETE /api/v1/milk-rates/:id
  * @access  Private
  */
-export const deleteMilkRate = asyncHandler(async (req: Request, res: Response) => {
-  await milkRateService.delete(req.params.id);
+export const deleteMilkRate = asyncHandler(async (req: AuthRequest, res: Response) => {
+  await milkRateService.delete(req.user?.id!, req.params.id);
 
   sendSuccess(res, null, 'Milk rate deleted successfully');
 });

@@ -23,6 +23,7 @@ const getUTCEndOfDay = (date: Date | string): Date => {
 };
 
 export interface CreateInseminationData {
+  userId: string;
   animalId: string;
   inseminationDate: Date;
   doctorName?: string;
@@ -30,6 +31,7 @@ export interface CreateInseminationData {
   breed?: string;
   notes?: string;
   userEmail?: string; // Email of the logged-in user creating the record
+  userPhone?: string; // WhatsApp number of the logged-in user
 }
 
 export interface UpdateInseminationData {
@@ -66,6 +68,11 @@ class BreedingService {
       throw new NotFoundError('Animal not found');
     }
 
+    // Ensure animal belongs to user
+    if (animal.userId.toString() !== data.userId) {
+      throw new NotFoundError('Animal not found');
+    }
+
     if (animal.isSold) {
       throw new BadRequestError('Cannot create insemination record for a sold animal');
     }
@@ -86,6 +93,7 @@ class BreedingService {
     pregnancyCheckDate.setUTCDate(pregnancyCheckDate.getUTCDate() + 90);
 
     const insemination = await Insemination.create({
+      userId: new mongoose.Types.ObjectId(data.userId),
       animal: new mongoose.Types.ObjectId(data.animalId),
       inseminationDate,
       pregnancyCheckDate,
@@ -97,9 +105,10 @@ class BreedingService {
       notificationSent: false,
     });
 
-    // Automatically create a notification for pregnancy check (90 days after insemination)
+    // Automatically create EMAIL notification for pregnancy check
     try {
       await Notification.create({
+        userId: new mongoose.Types.ObjectId(data.userId),
         animal: new mongoose.Types.ObjectId(data.animalId),
         insemination: insemination._id,
         type: 'pregnancy_check',
@@ -117,10 +126,36 @@ class BreedingService {
           inseminationDate: inseminationDate.toISOString(),
         },
       });
-      console.log(`✅ Created pregnancy check notification for animal ${animal.serialNumber} scheduled for ${pregnancyCheckDate.toLocaleDateString()} to be sent to ${data.userEmail || config.notificationEmail}`);
+      console.log(`✅ Created EMAIL notification for animal ${animal.serialNumber} to ${data.userEmail || config.notificationEmail}`);
     } catch (notificationError) {
-      // Log error but don't fail the insemination creation
-      console.error('Failed to create pregnancy check notification:', notificationError);
+      console.error('Failed to create email notification:', notificationError);
+    }
+
+    // Automatically create WHATSAPP notification for pregnancy check if user has phone
+    if (data.userPhone) {
+      try {
+        await Notification.create({
+          userId: new mongoose.Types.ObjectId(data.userId),
+          animal: new mongoose.Types.ObjectId(data.animalId),
+          insemination: insemination._id,
+          type: 'pregnancy_check',
+          channel: 'whatsapp',
+          status: 'pending',
+          scheduledDate: pregnancyCheckDate,
+          isSent: false,
+          message: `Pregnancy check is due for ${animal.animalType} ${animal.serialNumber}${animal.nickName ? ` (${animal.nickName})` : ''}. Insemination was performed on ${inseminationDate.toLocaleDateString()}. Please schedule a pregnancy check.`,
+          recipientPhone: data.userPhone,
+          metadata: {
+            animalSerialNumber: animal.serialNumber,
+            animalNickName: animal.nickName,
+            animalType: animal.animalType,
+            inseminationDate: inseminationDate.toISOString(),
+          },
+        });
+        console.log(`✅ Created WHATSAPP notification for animal ${animal.serialNumber} to ${data.userPhone}`);
+      } catch (notificationError) {
+        console.error('Failed to create WhatsApp notification:', notificationError);
+      }
     }
 
     return insemination.populate('animal', 'serialNumber nickName animalType');
@@ -130,11 +165,14 @@ class BreedingService {
    * Get all insemination records with filters
    */
   async getAll(
+    userId: string,
     filter: InseminationFilter = {},
     page = 1,
     limit = 10
   ): Promise<{ inseminations: IInsemination[]; total: number }> {
-    const query: Record<string, unknown> = {};
+    const query: Record<string, unknown> = {
+      userId: new mongoose.Types.ObjectId(userId),
+    };
 
     if (filter.animalId) {
       query.animal = new mongoose.Types.ObjectId(filter.animalId);
@@ -171,8 +209,11 @@ class BreedingService {
   /**
    * Get insemination record by ID
    */
-  async getById(id: string): Promise<IInsemination> {
-    const insemination = await Insemination.findById(id)
+  async getById(id: string, userId: string): Promise<IInsemination> {
+    const insemination = await Insemination.findOne({
+      _id: id,
+      userId: new mongoose.Types.ObjectId(userId),
+    })
       .populate('animal', 'serialNumber nickName animalType breed');
 
     if (!insemination) {
@@ -185,22 +226,31 @@ class BreedingService {
   /**
    * Get insemination records by animal ID
    */
-  async getByAnimalId(animalId: string): Promise<IInsemination[]> {
-    const animal = await Animal.findById(animalId);
+  async getByAnimalId(animalId: string, userId: string): Promise<IInsemination[]> {
+    const animal = await Animal.findOne({
+      _id: animalId,
+      userId: new mongoose.Types.ObjectId(userId),
+    });
 
     if (!animal) {
       throw new NotFoundError('Animal not found');
     }
 
-    return Insemination.find({ animal: new mongoose.Types.ObjectId(animalId) })
+    return Insemination.find({ 
+      animal: new mongoose.Types.ObjectId(animalId),
+      userId: new mongoose.Types.ObjectId(userId),
+    })
       .sort({ inseminationDate: -1 });
   }
 
   /**
    * Update insemination record
    */
-  async update(id: string, data: UpdateInseminationData): Promise<IInsemination> {
-    const insemination = await Insemination.findById(id);
+  async update(id: string, userId: string, data: UpdateInseminationData): Promise<IInsemination> {
+    const insemination = await Insemination.findOne({
+      _id: id,
+      userId: new mongoose.Types.ObjectId(userId),
+    });
 
     if (!insemination) {
       throw new NotFoundError('Insemination record not found');
@@ -238,8 +288,11 @@ class BreedingService {
   /**
    * Update pregnancy status
    */
-  async updateStatus(id: string, data: UpdatePregnancyStatusData): Promise<IInsemination> {
-    const insemination = await Insemination.findById(id);
+  async updateStatus(id: string, userId: string, data: UpdatePregnancyStatusData): Promise<IInsemination> {
+    const insemination = await Insemination.findOne({
+      _id: id,
+      userId: new mongoose.Types.ObjectId(userId),
+    });
 
     if (!insemination) {
       throw new NotFoundError('Insemination record not found');
@@ -294,8 +347,11 @@ class BreedingService {
   /**
    * Delete insemination record
    */
-  async delete(id: string): Promise<IInsemination> {
-    const insemination = await Insemination.findById(id);
+  async delete(id: string, userId: string): Promise<IInsemination> {
+    const insemination = await Insemination.findOne({
+      _id: id,
+      userId: new mongoose.Types.ObjectId(userId),
+    });
 
     if (!insemination) {
       throw new NotFoundError('Insemination record not found');
@@ -314,11 +370,12 @@ class BreedingService {
    * - notification not yet sent
    * - animal is not sold
    */
-  async getPendingPregnancyChecks(): Promise<IInsemination[]> {
+  async getPendingPregnancyChecks(userId: string): Promise<IInsemination[]> {
     const today = new Date();
     today.setHours(23, 59, 59, 999);
 
     const inseminations = await Insemination.find({
+      userId: new mongoose.Types.ObjectId(userId),
       pregnancyCheckDate: { $lte: today },
       pregnancyStatus: 'check_pending',
       notificationSent: false,
@@ -343,7 +400,7 @@ class BreedingService {
   /**
    * Get pregnancy statistics
    */
-  async getStatistics(): Promise<{
+  async getStatistics(userId: string): Promise<{
     total: number;
     checkPending: number;
     pregnantConfirmed: number;
@@ -351,11 +408,12 @@ class BreedingService {
     delivered: number;
     successRate: number;
   }> {
+    const userIdObj = new mongoose.Types.ObjectId(userId);
     const [checkPending, pregnantConfirmed, failed, delivered] = await Promise.all([
-      Insemination.countDocuments({ pregnancyStatus: 'check_pending' }),
-      Insemination.countDocuments({ pregnancyStatus: 'pregnant_confirmed' }),
-      Insemination.countDocuments({ pregnancyStatus: 'failed' }),
-      Insemination.countDocuments({ pregnancyStatus: 'delivered' }),
+      Insemination.countDocuments({ userId: userIdObj, pregnancyStatus: 'check_pending' }),
+      Insemination.countDocuments({ userId: userIdObj, pregnancyStatus: 'pregnant_confirmed' }),
+      Insemination.countDocuments({ userId: userIdObj, pregnancyStatus: 'failed' }),
+      Insemination.countDocuments({ userId: userIdObj, pregnancyStatus: 'delivered' }),
     ]);
 
     const total = checkPending + pregnantConfirmed + failed + delivered;

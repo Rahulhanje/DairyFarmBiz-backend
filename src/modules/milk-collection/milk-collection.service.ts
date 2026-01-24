@@ -15,6 +15,7 @@ const normalizeToUTCMidnight = (date: Date | string): Date => {
 };
 
 export interface CreateMilkCollectionData {
+  userId: string;
   date: Date;
   session: MilkSession;
   animalType: AnimalType;
@@ -47,6 +48,7 @@ class MilkCollectionService {
 
     // Check for duplicate entry
     const existingEntry = await MilkCollection.findOne({
+      userId: data.userId,
       date: entryDate,
       session: data.session,
       animalType: data.animalType,
@@ -59,13 +61,14 @@ class MilkCollectionService {
     }
 
     // Auto-fetch rate based on milk date
-    const rate = await milkRateService.getRateByDate(data.animalType, entryDate);
+    const rate = await milkRateService.getRateByDate(data.userId, data.animalType, entryDate);
     const rateApplied = rate.ratePerLiter;
 
     // Auto-calculate total amount
     const totalAmount = data.totalMilk * rateApplied;
 
     const milkCollection = await MilkCollection.create({
+      userId: data.userId,
       date: entryDate,
       session: data.session,
       animalType: data.animalType,
@@ -83,11 +86,12 @@ class MilkCollectionService {
    * If limit is 0 or not provided with filters, returns all matching records
    */
   async getAll(
+    userId: string,
     filter: MilkCollectionFilter = {},
     page = 1,
     limit = 10
   ): Promise<{ collections: IMilkCollection[]; total: number }> {
-    const query: Record<string, unknown> = {};
+    const query: Record<string, unknown> = { userId };
 
     if (filter.startDate || filter.endDate) {
       query.date = {};
@@ -132,8 +136,8 @@ class MilkCollectionService {
   /**
    * Get milk collection by ID
    */
-  async getById(id: string): Promise<IMilkCollection> {
-    const collection = await MilkCollection.findById(id);
+  async getById(userId: string, id: string): Promise<IMilkCollection> {
+    const collection = await MilkCollection.findOne({ _id: id, userId });
 
     if (!collection) {
       throw new NotFoundError('Milk collection entry not found');
@@ -146,8 +150,8 @@ class MilkCollectionService {
    * Update milk collection
    * Auto-recalculates rate and total amount if date, animalType, or totalMilk changes
    */
-  async update(id: string, data: UpdateMilkCollectionData): Promise<IMilkCollection> {
-    const collection = await MilkCollection.findById(id);
+  async update(userId: string, id: string, data: UpdateMilkCollectionData): Promise<IMilkCollection> {
+    const collection = await MilkCollection.findOne({ _id: id, userId });
 
     if (!collection) {
       throw new NotFoundError('Milk collection entry not found');
@@ -162,6 +166,7 @@ class MilkCollectionService {
     // Check for duplicate if date, session, or animalType is changing
     if (data.date || data.session || data.animalType) {
       const existingEntry = await MilkCollection.findOne({
+        userId,
         date: finalDate,
         session: finalSession,
         animalType: finalAnimalType,
@@ -180,7 +185,7 @@ class MilkCollectionService {
     let totalAmount = collection.totalAmount;
 
     if (data.date || data.animalType || data.totalMilk !== undefined) {
-      const rate = await milkRateService.getRateByDate(finalAnimalType, finalDate);
+      const rate = await milkRateService.getRateByDate(userId, finalAnimalType, finalDate);
       rateApplied = rate.ratePerLiter;
       totalAmount = finalTotalMilk * rateApplied;
     }
@@ -211,14 +216,14 @@ class MilkCollectionService {
   /**
    * Delete milk collection entry
    */
-  async delete(id: string): Promise<IMilkCollection> {
-    const collection = await MilkCollection.findById(id);
+  async delete(userId: string, id: string): Promise<IMilkCollection> {
+    const collection = await MilkCollection.findOne({ _id: id, userId });
 
     if (!collection) {
       throw new NotFoundError('Milk collection entry not found');
     }
 
-    await MilkCollection.findByIdAndDelete(id);
+    await MilkCollection.findOneAndDelete({ _id: id, userId });
 
     return collection;
   }
@@ -226,7 +231,7 @@ class MilkCollectionService {
   /**
    * Get daily summary for a specific date
    */
-  async getDailySummary(date: Date): Promise<{
+  async getDailySummary(userId: string, date: Date): Promise<{
     date: Date;
     cowMorning: number;
     cowEvening: number;
@@ -241,7 +246,7 @@ class MilkCollectionService {
   }> {
     const queryDate = normalizeToUTCMidnight(date);
 
-    const entries = await MilkCollection.find({ date: queryDate });
+    const entries = await MilkCollection.find({ userId, date: queryDate });
 
     const summary = {
       date: queryDate,
@@ -286,10 +291,10 @@ class MilkCollectionService {
   /**
    * Get entries for a specific date
    */
-  async getByDate(date: Date): Promise<IMilkCollection[]> {
+  async getByDate(userId: string, date: Date): Promise<IMilkCollection[]> {
     const queryDate = normalizeToUTCMidnight(date);
 
-    return MilkCollection.find({ date: queryDate }).sort({ animalType: 1, session: 1 });
+    return MilkCollection.find({ userId, date: queryDate }).sort({ animalType: 1, session: 1 });
   }
 
   /**
@@ -298,6 +303,7 @@ class MilkCollectionService {
    * and recalculates their totalAmount based on the applicable rate
    */
   async recalculateByRate(
+    userId: string,
     animalType: AnimalType,
     effectiveFrom: Date
   ): Promise<{ updated: number }> {
@@ -305,6 +311,7 @@ class MilkCollectionService {
 
     // Find all collections for this animal type on or after the effective date
     const collections = await MilkCollection.find({
+      userId,
       animalType,
       date: { $gte: effectiveDate },
     });
@@ -313,7 +320,7 @@ class MilkCollectionService {
 
     for (const collection of collections) {
       // Get the applicable rate for this collection's date
-      const rate = await milkRateService.getRateByDate(animalType, collection.date);
+      const rate = await milkRateService.getRateByDate(userId, animalType, collection.date);
       const newRateApplied = rate.ratePerLiter;
       const newTotalAmount = collection.totalMilk * newRateApplied;
 
