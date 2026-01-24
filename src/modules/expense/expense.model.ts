@@ -39,7 +39,7 @@ const expenseSchema = new Schema<IExpense>(
       type: String,
       required: [true, 'Category is required'],
       enum: {
-        values: ['feed', 'medicine', 'equipment', 'labor', 'maintenance', 'transport', 'other'],
+        values: ['feed', 'medicine', 'doctor', 'equipment', 'labor', 'maintenance', 'transport', 'other'],
         message: 'Invalid category',
       },
     },

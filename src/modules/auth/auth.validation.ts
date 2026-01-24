@@ -14,7 +14,21 @@ export const signupValidation = [
     .withMessage('Email is required')
     .isEmail()
     .withMessage('Please enter a valid email')
-    .normalizeEmail(),
+    .normalizeEmail({ gmail_remove_dots: false }),
+
+  body('phone')
+    .trim()
+    .notEmpty()
+    .withMessage('WhatsApp number is required')
+    .matches(/^[0-9]{10}$/)
+    .withMessage('WhatsApp number must be exactly 10 digits'),
+
+  body('countryCode')
+    .trim()
+    .notEmpty()
+    .withMessage('Country code is required')
+    .isIn(['+91'])
+    .withMessage('Only India (+91) country code is supported'),
 
   body('password')
     .notEmpty()
@@ -39,7 +53,7 @@ export const loginValidation = [
     .withMessage('Email is required')
     .isEmail()
     .withMessage('Please enter a valid email')
-    .normalizeEmail(),
+    .normalizeEmail({ gmail_remove_dots: false }),
 
   body('password').notEmpty().withMessage('Password is required'),
 ];

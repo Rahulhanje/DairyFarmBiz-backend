@@ -2,6 +2,22 @@ import { Expense, IExpense } from './expense.model';
 import { ExpenseCategory } from '../../types';
 import { NotFoundError } from '../../utils/ApiError';
 
+/**
+ * Normalize a date to UTC midnight (start of day in UTC)
+ */
+const normalizeToUTCMidnight = (date: Date | string): Date => {
+  const d = new Date(date);
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 0, 0, 0, 0));
+};
+
+/**
+ * Get UTC end of day (23:59:59.999)
+ */
+const getUTCEndOfDay = (date: Date | string): Date => {
+  const d = new Date(date);
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 23, 59, 59, 999));
+};
+
 export interface CreateExpenseData {
   name: string;
   amount: number;
@@ -30,8 +46,7 @@ class ExpenseService {
    * Create a new expense
    */
   async create(data: CreateExpenseData): Promise<IExpense> {
-    const expenseDate = data.date ? new Date(data.date) : new Date();
-    expenseDate.setHours(0, 0, 0, 0);
+    const expenseDate = data.date ? normalizeToUTCMidnight(data.date) : normalizeToUTCMidnight(new Date());
 
     const expense = await Expense.create({
       ...data,
@@ -54,14 +69,10 @@ class ExpenseService {
     if (filter.startDate || filter.endDate) {
       query.date = {};
       if (filter.startDate) {
-        const startDate = new Date(filter.startDate);
-        startDate.setHours(0, 0, 0, 0);
-        (query.date as Record<string, Date>).$gte = startDate;
+        (query.date as Record<string, Date>).$gte = normalizeToUTCMidnight(filter.startDate);
       }
       if (filter.endDate) {
-        const endDate = new Date(filter.endDate);
-        endDate.setHours(23, 59, 59, 999);
-        (query.date as Record<string, Date>).$lte = endDate;
+        (query.date as Record<string, Date>).$lte = getUTCEndOfDay(filter.endDate);
       }
     }
 
@@ -111,9 +122,7 @@ class ExpenseService {
 
     // Normalize date if provided
     if (data.date) {
-      const expenseDate = new Date(data.date);
-      expenseDate.setHours(0, 0, 0, 0);
-      data.date = expenseDate;
+      data.date = normalizeToUTCMidnight(data.date);
     }
 
     const updatedExpense = await Expense.findByIdAndUpdate(
@@ -151,10 +160,8 @@ class ExpenseService {
     startDate: Date,
     endDate: Date
   ): Promise<{ total: number; count: number; byCategory: Record<string, number> }> {
-    const start = new Date(startDate);
-    start.setHours(0, 0, 0, 0);
-    const end = new Date(endDate);
-    end.setHours(23, 59, 59, 999);
+    const start = normalizeToUTCMidnight(startDate);
+    const end = getUTCEndOfDay(endDate);
 
     const result = await Expense.aggregate([
       {

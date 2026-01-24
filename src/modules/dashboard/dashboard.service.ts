@@ -4,6 +4,23 @@ import { Animal } from '../animal';
 import { Insemination } from '../breeding';
 import mongoose from 'mongoose';
 
+/**
+ * Normalize a date to UTC midnight (start of day in UTC)
+ * This ensures consistent date handling regardless of server timezone
+ */
+const normalizeToUTCMidnight = (date: Date | string): Date => {
+  const d = new Date(date);
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 0, 0, 0, 0));
+};
+
+/**
+ * Get UTC end of day (23:59:59.999)
+ */
+const getUTCEndOfDay = (date: Date | string): Date => {
+  const d = new Date(date);
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 23, 59, 59, 999));
+};
+
 export type Period = 'daily' | 'weekly' | 'monthly' | 'yearly' | 'custom';
 
 export interface DateRange {
@@ -60,53 +77,57 @@ export interface DashboardSummary {
 
 class DashboardService {
   /**
-   * Get date range based on period
+   * Get date range based on period (using UTC for consistency)
    */
   getDateRange(period: Period, customStart?: Date, customEnd?: Date): DateRange {
     const now = new Date();
     let startDate: Date;
-    let endDate: Date = new Date(now);
-    endDate.setHours(23, 59, 59, 999);
+    let endDate: Date;
 
     switch (period) {
       case 'daily':
-        startDate = new Date(now);
-        startDate.setHours(0, 0, 0, 0);
+        startDate = normalizeToUTCMidnight(now);
+        endDate = getUTCEndOfDay(now);
         break;
 
-      case 'weekly':
-        startDate = new Date(now);
-        startDate.setDate(now.getDate() - now.getDay()); // Start of week (Sunday)
-        startDate.setHours(0, 0, 0, 0);
+      case 'weekly': {
+        const weekStart = new Date(now);
+        weekStart.setDate(now.getDate() - now.getDay()); // Start of week (Sunday)
+        startDate = normalizeToUTCMidnight(weekStart);
+        endDate = getUTCEndOfDay(now);
         break;
+      }
 
-      case 'monthly':
-        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-        startDate.setHours(0, 0, 0, 0);
+      case 'monthly': {
+        const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+        startDate = monthStart;
+        endDate = getUTCEndOfDay(now);
         break;
+      }
 
-      case 'yearly':
-        startDate = new Date(now.getFullYear(), 0, 1);
-        startDate.setHours(0, 0, 0, 0);
+      case 'yearly': {
+        const yearStart = new Date(Date.UTC(now.getUTCFullYear(), 0, 1));
+        startDate = yearStart;
+        endDate = getUTCEndOfDay(now);
         break;
+      }
 
       case 'custom':
         if (!customStart || !customEnd) {
           // Default to last 30 days if no custom range provided
-          startDate = new Date(now);
-          startDate.setDate(now.getDate() - 30);
-          startDate.setHours(0, 0, 0, 0);
+          const thirtyDaysAgo = new Date(now);
+          thirtyDaysAgo.setDate(now.getDate() - 30);
+          startDate = normalizeToUTCMidnight(thirtyDaysAgo);
+          endDate = getUTCEndOfDay(now);
         } else {
-          startDate = new Date(customStart);
-          startDate.setHours(0, 0, 0, 0);
-          endDate = new Date(customEnd);
-          endDate.setHours(23, 59, 59, 999);
+          startDate = normalizeToUTCMidnight(customStart);
+          endDate = getUTCEndOfDay(customEnd);
         }
         break;
 
       default:
-        startDate = new Date(now);
-        startDate.setHours(0, 0, 0, 0);
+        startDate = normalizeToUTCMidnight(now);
+        endDate = getUTCEndOfDay(now);
     }
 
     return { startDate, endDate };

@@ -21,4 +21,5 @@ export const config = {
   smtpPass: process.env.SMTP_PASS || '',
   emailFrom: process.env.EMAIL_FROM || 'noreply@dairyfarm.com',
   emailFromName: process.env.EMAIL_FROM_NAME || 'Dairy Farm Management',
+  notificationEmail: process.env.NOTIFICATION_EMAIL || '',
 };

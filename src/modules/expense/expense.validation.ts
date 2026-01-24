@@ -22,7 +22,7 @@ export const createExpenseValidation = [
   body('category')
     .notEmpty()
     .withMessage('Category is required')
-    .isIn(['feed', 'medicine', 'equipment', 'labor', 'maintenance', 'transport', 'other'])
+    .isIn(['feed', 'medicine', 'doctor', 'equipment', 'labor', 'maintenance', 'transport', 'other'])
     .withMessage('Invalid category'),
 
   body('notes')
@@ -57,7 +57,7 @@ export const updateExpenseValidation = [
 
   body('category')
     .optional()
-    .isIn(['feed', 'medicine', 'equipment', 'labor', 'maintenance', 'transport', 'other'])
+    .isIn(['feed', 'medicine', 'doctor', 'equipment', 'labor', 'maintenance', 'transport', 'other'])
     .withMessage('Invalid category'),
 
   body('notes')
@@ -86,6 +86,6 @@ export const getExpensesFilterValidation = [
 
   query('category')
     .optional()
-    .isIn(['feed', 'medicine', 'equipment', 'labor', 'maintenance', 'transport', 'other'])
+    .isIn(['feed', 'medicine', 'doctor', 'equipment', 'labor', 'maintenance', 'transport', 'other'])
     .withMessage('Invalid category'),
 ];

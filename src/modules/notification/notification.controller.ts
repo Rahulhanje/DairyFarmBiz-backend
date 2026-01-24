@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { notificationService } from './notification.service';
 import { emailService } from './email.service';
+import { AuthRequest } from '../../types';
 import { cronJobService } from '../../utils/cronJobs';
 import { asyncHandler } from '../../utils/asyncHandler';
 import { sendSuccess, sendCreated, sendPaginated, sendNoContent } from '../../utils/responseHandler';
@@ -119,8 +120,11 @@ export const getAllNotifications = asyncHandler(async (req: Request, res: Respon
  * @route   POST /api/v1/notifications/:id/send
  * @access  Private
  */
-export const sendNotification = asyncHandler(async (req: Request, res: Response) => {
-  const result = await notificationService.sendEmailNotification(req.params.id);
+export const sendNotification = asyncHandler(async (req: AuthRequest, res: Response) => {
+  // Get the logged-in user's email from the request
+  const userEmail = req.user?.email;
+  console.log('[DEBUG] Sending notification to user email:', userEmail);
+  const result = await notificationService.sendEmailNotification(req.params.id, userEmail);
 
   if (result.success) {
     sendSuccess(res, { sent: true }, 'Notification sent successfully');
@@ -214,4 +218,28 @@ export const getCronStatus = asyncHandler(async (_req: Request, res: Response) =
 export const runCronManually = asyncHandler(async (_req: Request, res: Response) => {
   const result = await cronJobService.runDailyNotificationJob();
   sendSuccess(res, result, 'Cron job executed successfully');
+});
+
+/**
+ * @desc    Create a test notification due immediately
+ * @route   POST /api/v1/notifications/test-immediate
+ * @access  Private
+ */
+export const createImmediateTestNotification = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const userEmail = req.user?.email;
+  
+  if (!userEmail) {
+    return sendSuccess(res, { error: 'User email not found' }, 'Failed to create test notification');
+  }
+
+  const notification = await notificationService.create({
+    type: 'pregnancy_check',
+    channel: 'email',
+    scheduledDate: new Date(), // Schedule for right now
+    message: `This is a test notification to verify automatic email system. Scheduled at ${new Date().toLocaleString()}.`,
+    subject: 'Test Notification - Immediate Delivery',
+    recipientEmail: userEmail,
+  });
+
+  sendCreated(res, notification, 'Test notification created and scheduled for immediate delivery. Wait for next cron cycle (runs every hour) or call /run-cron to send it now.');
 });

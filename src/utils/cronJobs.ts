@@ -8,7 +8,7 @@ import mongoose from 'mongoose';
 
 class CronJobService {
   private isRunning = false;
-  private dailyJob: cron.ScheduledTask | null = null;
+  private hourlyJob: cron.ScheduledTask | null = null;
 
   /**
    * Initialize all cron jobs
@@ -16,20 +16,27 @@ class CronJobService {
   initialize(): void {
     console.log('🕐 Initializing cron jobs...');
 
-    // Run daily at 8:00 AM
-    this.dailyJob = cron.schedule('0 8 * * *', async () => {
+    // FOR TESTING: Run every minute to test automatic email sending
+    // FOR PRODUCTION: Change to '0 * * * *' to run every hour
+    this.hourlyJob = cron.schedule('* * * * *', async () => {
       await this.runDailyNotificationJob();
     });
 
-    console.log('✅ Cron jobs initialized - Daily notification job scheduled for 8:00 AM');
+    // Also run immediately on startup to catch any missed notifications
+    setTimeout(() => {
+      this.runDailyNotificationJob();
+    }, 5000); // Wait 5 seconds after server start
+
+    console.log('✅ Cron jobs initialized - Notification job runs EVERY MINUTE (testing mode)');
+    console.log('⚠️  Remember to change back to hourly schedule for production!');
   }
 
   /**
    * Stop all cron jobs
    */
   stop(): void {
-    if (this.dailyJob) {
-      this.dailyJob.stop();
+    if (this.hourlyJob) {
+      this.hourlyJob.stop();
       console.log('🛑 Cron jobs stopped');
     }
   }
@@ -326,21 +333,18 @@ class CronJobService {
   getStatus(): { isRunning: boolean; nextRun: Date | null } {
     return {
       isRunning: this.isRunning,
-      nextRun: this.dailyJob ? new Date(Date.now() + this.getTimeUntilNextRun()) : null,
+      nextRun: this.hourlyJob ? new Date(Date.now() + this.getTimeUntilNextRun()) : null,
     };
   }
 
   /**
-   * Calculate time until next 8:00 AM run
+   * Calculate time until next hourly run
    */
   private getTimeUntilNextRun(): number {
     const now = new Date();
     const next = new Date(now);
-    next.setHours(8, 0, 0, 0);
-
-    if (now >= next) {
-      next.setDate(next.getDate() + 1);
-    }
+    next.setMinutes(0, 0, 0);
+    next.setHours(next.getHours() + 1);
 
     return next.getTime() - now.getTime();
   }

@@ -5,6 +5,8 @@ import {
   getAllRates,
   getCurrentRates,
   getRateById,
+  updateMilkRate,
+  deleteMilkRate,
 } from './milk-rate.controller';
 import {
   createMilkRateValidation,
@@ -24,7 +26,7 @@ router.get('/current', getCurrentRates);
 // Get rate by date and animal type
 router.get('/by-date', validate(getRateByDateValidation), getRateByDate);
 
-// Create new rate (old rates cannot be updated)
+// Create new rate
 router.post('/', validate(createMilkRateValidation), createMilkRate);
 
 // Get all rates (optional filter by animalType)
@@ -32,5 +34,11 @@ router.get('/', getAllRates);
 
 // Get rate by ID
 router.get('/:id', getRateById);
+
+// Update rate
+router.put('/:id', updateMilkRate);
+
+// Delete rate
+router.delete('/:id', deleteMilkRate);
 
 export default router;

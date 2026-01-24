@@ -2,6 +2,7 @@ import { Notification, INotification, NotificationType, NotificationChannel, Not
 import { emailService } from './email.service';
 import { breedingService } from '../breeding';
 import { NotFoundError, BadRequestError } from '../../utils/ApiError';
+import { config } from '../../config';
 import mongoose from 'mongoose';
 
 export interface CreateNotificationData {
@@ -210,8 +211,11 @@ class NotificationService {
 
   /**
    * Send a notification via email
+   * @param notificationId - The notification to send
+   * @param userEmail - The logged-in user's email (required for manual sends)
+   * @param isAutomated - If true, uses config.notificationEmail instead of userEmail
    */
-  async sendEmailNotification(notificationId: string): Promise<{ success: boolean; error?: string }> {
+  async sendEmailNotification(notificationId: string, userEmail?: string, isAutomated = false): Promise<{ success: boolean; error?: string }> {
     const notification = await Notification.findById(notificationId)
       .populate('animal', 'serialNumber nickName animalType')
       .populate('insemination', 'inseminationDate pregnancyCheckDate');
@@ -228,12 +232,24 @@ class NotificationService {
       throw new BadRequestError('Notification channel is not email');
     }
 
-    if (!notification.recipientEmail) {
-      throw new BadRequestError('No recipient email specified');
+    // For automated notifications, use config email; for manual sends, use user's email
+    let recipientEmail: string;
+    if (isAutomated) {
+      recipientEmail = notification.recipientEmail || config.notificationEmail;
+    } else {
+      // Manual send - always use the logged-in user's email
+      if (!userEmail) {
+        throw new BadRequestError('User email is required to send notification');
+      }
+      recipientEmail = userEmail;
+    }
+    
+    if (!recipientEmail) {
+      throw new BadRequestError('No recipient email available');
     }
 
     const result = await emailService.sendEmail({
-      to: notification.recipientEmail,
+      to: recipientEmail,
       subject: notification.subject || 'Dairy Farm Notification',
       text: notification.message,
     });
@@ -287,8 +303,9 @@ class NotificationService {
         }
       }
 
-      if (notification.channel === 'email' && notification.recipientEmail) {
-        const result = await this.sendEmailNotification(notification._id.toString());
+      if (notification.channel === 'email') {
+        // Automated processing - use isAutomated flag
+        const result = await this.sendEmailNotification(notification._id.toString(), undefined, true);
         if (result.success) {
           sent++;
         } else {

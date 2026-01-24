@@ -3,6 +3,17 @@ import { milkRateService } from '../milk-rate';
 import { AnimalType, MilkSession } from '../../types';
 import { NotFoundError, ConflictError } from '../../utils/ApiError';
 
+/**
+ * Normalize a date to UTC midnight (start of day in UTC)
+ * This ensures consistent date handling regardless of server timezone
+ */
+const normalizeToUTCMidnight = (date: Date | string): Date => {
+  const d = new Date(date);
+  // If the input is a date string like "2026-01-24", it's already UTC midnight
+  // But if it's a Date object, we need to normalize it
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 0, 0, 0, 0));
+};
+
 export interface CreateMilkCollectionData {
   date: Date;
   session: MilkSession;
@@ -32,8 +43,7 @@ class MilkCollectionService {
    * Auto-fetches rate and calculates total amount
    */
   async create(data: CreateMilkCollectionData): Promise<IMilkCollection> {
-    const entryDate = new Date(data.date);
-    entryDate.setHours(0, 0, 0, 0);
+    const entryDate = normalizeToUTCMidnight(data.date);
 
     // Check for duplicate entry
     const existingEntry = await MilkCollection.findOne({
@@ -70,6 +80,7 @@ class MilkCollectionService {
 
   /**
    * Get all milk collections with filters
+   * If limit is 0 or not provided with filters, returns all matching records
    */
   async getAll(
     filter: MilkCollectionFilter = {},
@@ -81,11 +92,12 @@ class MilkCollectionService {
     if (filter.startDate || filter.endDate) {
       query.date = {};
       if (filter.startDate) {
-        (query.date as Record<string, Date>).$gte = new Date(filter.startDate);
+        (query.date as Record<string, Date>).$gte = normalizeToUTCMidnight(filter.startDate);
       }
       if (filter.endDate) {
-        const endDate = new Date(filter.endDate);
-        endDate.setHours(23, 59, 59, 999);
+        const endDate = normalizeToUTCMidnight(filter.endDate);
+        // Set to end of day in UTC
+        endDate.setUTCHours(23, 59, 59, 999);
         (query.date as Record<string, Date>).$lte = endDate;
       }
     }
@@ -98,15 +110,21 @@ class MilkCollectionService {
       query.session = filter.session;
     }
 
+    const total = await MilkCollection.countDocuments(query);
+
+    // If limit is 0, return all records (used when filters are applied)
+    if (limit === 0) {
+      const collections = await MilkCollection.find(query)
+        .sort({ date: -1, session: 1 });
+      return { collections, total };
+    }
+
     const skip = (page - 1) * limit;
 
-    const [collections, total] = await Promise.all([
-      MilkCollection.find(query)
-        .sort({ date: -1, session: 1 })
-        .skip(skip)
-        .limit(limit),
-      MilkCollection.countDocuments(query),
-    ]);
+    const collections = await MilkCollection.find(query)
+      .sort({ date: -1, session: 1 })
+      .skip(skip)
+      .limit(limit);
 
     return { collections, total };
   }
@@ -136,8 +154,7 @@ class MilkCollectionService {
     }
 
     // Determine final values for duplicate check and rate calculation
-    const finalDate = data.date ? new Date(data.date) : collection.date;
-    finalDate.setHours(0, 0, 0, 0);
+    const finalDate = data.date ? normalizeToUTCMidnight(data.date) : collection.date;
     const finalSession = data.session || collection.session;
     const finalAnimalType = data.animalType || collection.animalType;
     const finalTotalMilk = data.totalMilk !== undefined ? data.totalMilk : collection.totalMilk;
@@ -222,8 +239,7 @@ class MilkCollectionService {
     grandTotal: number;
     grandAmount: number;
   }> {
-    const queryDate = new Date(date);
-    queryDate.setHours(0, 0, 0, 0);
+    const queryDate = normalizeToUTCMidnight(date);
 
     const entries = await MilkCollection.find({ date: queryDate });
 
@@ -271,10 +287,46 @@ class MilkCollectionService {
    * Get entries for a specific date
    */
   async getByDate(date: Date): Promise<IMilkCollection[]> {
-    const queryDate = new Date(date);
-    queryDate.setHours(0, 0, 0, 0);
+    const queryDate = normalizeToUTCMidnight(date);
 
     return MilkCollection.find({ date: queryDate }).sort({ animalType: 1, session: 1 });
+  }
+
+  /**
+   * Recalculate all milk collections affected by a rate change
+   * This finds all collections for the given animalType on or after the effectiveFrom date
+   * and recalculates their totalAmount based on the applicable rate
+   */
+  async recalculateByRate(
+    animalType: AnimalType,
+    effectiveFrom: Date
+  ): Promise<{ updated: number }> {
+    const effectiveDate = normalizeToUTCMidnight(effectiveFrom);
+
+    // Find all collections for this animal type on or after the effective date
+    const collections = await MilkCollection.find({
+      animalType,
+      date: { $gte: effectiveDate },
+    });
+
+    let updatedCount = 0;
+
+    for (const collection of collections) {
+      // Get the applicable rate for this collection's date
+      const rate = await milkRateService.getRateByDate(animalType, collection.date);
+      const newRateApplied = rate.ratePerLiter;
+      const newTotalAmount = collection.totalMilk * newRateApplied;
+
+      // Only update if the rate or amount has changed
+      if (collection.rateApplied !== newRateApplied || collection.totalAmount !== newTotalAmount) {
+        collection.rateApplied = newRateApplied;
+        collection.totalAmount = newTotalAmount;
+        await collection.save();
+        updatedCount++;
+      }
+    }
+
+    return { updated: updatedCount };
   }
 }
 

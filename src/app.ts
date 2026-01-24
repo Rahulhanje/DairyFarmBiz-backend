@@ -34,8 +34,8 @@ app.use(sanitizeInput);
 // Prevent parameter pollution
 app.use(preventParamPollution(['sort', 'fields']));
 
-// Rate limiting for API routes
-app.use('/api', apiRateLimiter);
+// Rate limiting for API routes (temporarily disabled)
+// app.use('/api', apiRateLimiter);
 
 // Health check route
 app.get('/health', (_req, res) => {

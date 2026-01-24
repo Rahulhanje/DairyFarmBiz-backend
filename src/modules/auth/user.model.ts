@@ -8,6 +8,8 @@ export interface IUser extends Document {
   name: string;
   email: string;
   passwordHash: string;
+  phone: string;
+  countryCode: string;
   role: UserRole;
   isActive: boolean;
   createdAt: Date;
@@ -34,6 +36,17 @@ const userSchema = new Schema<IUser>(
         /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/,
         'Please enter a valid email',
       ],
+    },
+    phone: {
+      type: String,
+      required: [true, 'WhatsApp number is required'],
+      trim: true,
+      match: [/^[0-9]{10}$/, 'Please enter a valid 10-digit WhatsApp number'],
+    },
+    countryCode: {
+      type: String,
+      default: '+91',
+      trim: true,
     },
     passwordHash: {
       type: String,

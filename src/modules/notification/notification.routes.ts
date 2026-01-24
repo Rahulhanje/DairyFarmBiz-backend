@@ -14,6 +14,7 @@ import {
   sendTestEmail,
   getCronStatus,
   runCronManually,
+  createImmediateTestNotification,
 } from './notification.controller';
 import {
   createNotificationValidation,
@@ -35,6 +36,7 @@ router.get('/statistics', getStatistics);
 router.get('/email-status', getEmailStatus);
 router.get('/cron-status', getCronStatus);
 router.post('/test-email', validate(sendTestEmailValidation), sendTestEmail);
+router.post('/test-immediate', createImmediateTestNotification);
 router.post('/process-pending', processPendingNotifications);
 router.post('/pregnancy-reminders', createPregnancyReminders);
 router.post('/run-cron', runCronManually);

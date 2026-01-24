@@ -6,6 +6,8 @@ export interface SignupData {
   name: string;
   email: string;
   password: string;
+  phone: string;
+  countryCode?: string;
   role?: UserRole;
 }
 
@@ -29,7 +31,7 @@ class AuthService {
    * Register a new user
    */
   async signup(data: SignupData): Promise<AuthResponse> {
-    const { name, email, password, role } = data;
+    const { name, email, password, phone, countryCode, role } = data;
 
     // Check if user already exists
     const existingUser = await User.findOne({ email });
@@ -42,6 +44,8 @@ class AuthService {
       name,
       email,
       passwordHash: password, // Will be hashed by pre-save hook
+      phone,
+      countryCode: countryCode || '+91',
       role: role || 'staff',
     });
 
@@ -68,10 +72,14 @@ class AuthService {
   async login(data: LoginData): Promise<AuthResponse> {
     const { email, password } = data;
 
+    console.log('[DEBUG] Login attempt with email:', email);
+
     // Find user with password field
     const user = await User.findOne({ email, isActive: true }).select(
       '+passwordHash'
     );
+
+    console.log('[DEBUG] User found:', user ? 'Yes' : 'No');
 
     if (!user) {
       throw new UnauthorizedError('Invalid email or password');
@@ -79,6 +87,8 @@ class AuthService {
 
     // Check password
     const isPasswordValid = await user.comparePassword(password);
+    console.log('[DEBUG] Password valid:', isPasswordValid);
+    
     if (!isPasswordValid) {
       throw new UnauthorizedError('Invalid email or password');
     }

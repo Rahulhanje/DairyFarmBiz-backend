@@ -74,3 +74,26 @@ export const getRateById = asyncHandler(async (req: Request, res: Response) => {
 
   sendSuccess(res, rate, 'Milk rate fetched successfully');
 });
+
+/**
+ * @desc    Update milk rate
+ * @route   PUT /api/v1/milk-rates/:id
+ * @access  Private
+ */
+export const updateMilkRate = asyncHandler(async (req: Request, res: Response) => {
+  const { ratePerLiter } = req.body;
+  const rate = await milkRateService.update(req.params.id, ratePerLiter);
+
+  sendSuccess(res, rate, 'Milk rate updated successfully');
+});
+
+/**
+ * @desc    Delete milk rate
+ * @route   DELETE /api/v1/milk-rates/:id
+ * @access  Private
+ */
+export const deleteMilkRate = asyncHandler(async (req: Request, res: Response) => {
+  await milkRateService.delete(req.params.id);
+
+  sendSuccess(res, null, 'Milk rate deleted successfully');
+});

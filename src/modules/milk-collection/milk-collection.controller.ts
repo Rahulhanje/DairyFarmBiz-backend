@@ -30,7 +30,9 @@ export const createMilkCollection = asyncHandler(async (req: Request, res: Respo
  */
 export const getMilkCollections = asyncHandler(async (req: Request, res: Response) => {
   const page = parseInt(req.query.page as string) || 1;
-  const limit = parseInt(req.query.limit as string) || 10;
+  // Use limit=0 to fetch all records (when filters are applied)
+  const limitParam = req.query.limit as string;
+  const limit = limitParam !== undefined ? parseInt(limitParam) : 10;
   const startDate = req.query.startDate ? new Date(req.query.startDate as string) : undefined;
   const endDate = req.query.endDate ? new Date(req.query.endDate as string) : undefined;
   const animalType = req.query.animalType as AnimalType | undefined;

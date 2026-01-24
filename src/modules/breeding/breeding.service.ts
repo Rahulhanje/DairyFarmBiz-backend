@@ -1,8 +1,26 @@
 import { Insemination, IInsemination } from './insemination.model';
 import { Animal } from '../animal';
+import { Notification } from '../notification/notification.model';
 import { PregnancyStatus } from '../../types';
 import { NotFoundError, BadRequestError } from '../../utils/ApiError';
+import { config } from '../../config';
 import mongoose from 'mongoose';
+
+/**
+ * Normalize a date to UTC midnight (start of day in UTC)
+ */
+const normalizeToUTCMidnight = (date: Date | string): Date => {
+  const d = new Date(date);
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 0, 0, 0, 0));
+};
+
+/**
+ * Get UTC end of day (23:59:59.999)
+ */
+const getUTCEndOfDay = (date: Date | string): Date => {
+  const d = new Date(date);
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 23, 59, 59, 999));
+};
 
 export interface CreateInseminationData {
   animalId: string;
@@ -11,6 +29,7 @@ export interface CreateInseminationData {
   semenType?: string;
   breed?: string;
   notes?: string;
+  userEmail?: string; // Email of the logged-in user creating the record
 }
 
 export interface UpdateInseminationData {
@@ -60,12 +79,11 @@ class BreedingService {
       throw new BadRequestError('Insemination can only be recorded for female animals');
     }
 
-    const inseminationDate = new Date(data.inseminationDate);
-    inseminationDate.setHours(0, 0, 0, 0);
+    const inseminationDate = normalizeToUTCMidnight(data.inseminationDate);
 
     // Auto-calculate pregnancy check date (90 days from insemination)
     const pregnancyCheckDate = new Date(inseminationDate);
-    pregnancyCheckDate.setDate(pregnancyCheckDate.getDate() + 90);
+    pregnancyCheckDate.setUTCDate(pregnancyCheckDate.getUTCDate() + 90);
 
     const insemination = await Insemination.create({
       animal: new mongoose.Types.ObjectId(data.animalId),
@@ -78,6 +96,32 @@ class BreedingService {
       pregnancyStatus: 'check_pending',
       notificationSent: false,
     });
+
+    // Automatically create a notification for pregnancy check (90 days after insemination)
+    try {
+      await Notification.create({
+        animal: new mongoose.Types.ObjectId(data.animalId),
+        insemination: insemination._id,
+        type: 'pregnancy_check',
+        channel: 'email',
+        status: 'pending',
+        scheduledDate: pregnancyCheckDate,
+        isSent: false,
+        subject: `Pregnancy Check Reminder - ${animal.serialNumber}`,
+        message: `Pregnancy check is due for ${animal.animalType} ${animal.serialNumber}${animal.nickName ? ` (${animal.nickName})` : ''}. Insemination was performed on ${inseminationDate.toLocaleDateString()}. Please schedule a pregnancy check.`,
+        recipientEmail: data.userEmail || config.notificationEmail || config.smtpUser,
+        metadata: {
+          animalSerialNumber: animal.serialNumber,
+          animalNickName: animal.nickName,
+          animalType: animal.animalType,
+          inseminationDate: inseminationDate.toISOString(),
+        },
+      });
+      console.log(`✅ Created pregnancy check notification for animal ${animal.serialNumber} scheduled for ${pregnancyCheckDate.toLocaleDateString()} to be sent to ${data.userEmail || config.notificationEmail}`);
+    } catch (notificationError) {
+      // Log error but don't fail the insemination creation
+      console.error('Failed to create pregnancy check notification:', notificationError);
+    }
 
     return insemination.populate('animal', 'serialNumber nickName animalType');
   }
@@ -103,14 +147,10 @@ class BreedingService {
     if (filter.startDate || filter.endDate) {
       query.inseminationDate = {};
       if (filter.startDate) {
-        const startDate = new Date(filter.startDate);
-        startDate.setHours(0, 0, 0, 0);
-        (query.inseminationDate as Record<string, Date>).$gte = startDate;
+        (query.inseminationDate as Record<string, Date>).$gte = normalizeToUTCMidnight(filter.startDate);
       }
       if (filter.endDate) {
-        const endDate = new Date(filter.endDate);
-        endDate.setHours(23, 59, 59, 999);
-        (query.inseminationDate as Record<string, Date>).$lte = endDate;
+        (query.inseminationDate as Record<string, Date>).$lte = getUTCEndOfDay(filter.endDate);
       }
     }
 
@@ -170,11 +210,10 @@ class BreedingService {
     let updateData: Record<string, unknown> = { ...data };
     
     if (data.inseminationDate) {
-      const inseminationDate = new Date(data.inseminationDate);
-      inseminationDate.setHours(0, 0, 0, 0);
+      const inseminationDate = normalizeToUTCMidnight(data.inseminationDate);
       
       const pregnancyCheckDate = new Date(inseminationDate);
-      pregnancyCheckDate.setDate(pregnancyCheckDate.getDate() + 90);
+      pregnancyCheckDate.setUTCDate(pregnancyCheckDate.getUTCDate() + 90);
       
       updateData = {
         ...updateData,
@@ -232,7 +271,7 @@ class BreedingService {
     };
 
     if (data.deliveryDate) {
-      updateData.deliveryDate = new Date(data.deliveryDate);
+      updateData.deliveryDate = normalizeToUTCMidnight(data.deliveryDate);
     }
 
     if (data.notes) {

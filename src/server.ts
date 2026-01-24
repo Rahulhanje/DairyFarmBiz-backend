@@ -11,10 +11,11 @@ const startServer = async (): Promise<void> => {
     // Initialize cron jobs
     cronJobService.initialize();
 
-    // Start Express server
-    app.listen(config.port, () => {
+    // Start Express server - listen on all interfaces (0.0.0.0) for mobile access
+    app.listen(config.port, '0.0.0.0', () => {
       console.log(`🚀 Server running in ${config.nodeEnv} mode on port ${config.port}`);
       console.log(`📡 Health check: http://localhost:${config.port}/health`);
+      console.log(`📱 Mobile access: http://<your-ip>:${config.port}/health`);
     });
   } catch (error) {
     console.error('Failed to start server:', error);

@@ -25,6 +25,7 @@ export type PregnancyStatus =
 export type ExpenseCategory = 
   | 'feed' 
   | 'medicine' 
+  | 'doctor' 
   | 'equipment' 
   | 'labor' 
   | 'maintenance' 

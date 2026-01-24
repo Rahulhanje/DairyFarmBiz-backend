@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { AuthRequest } from '../../types';
 import { breedingService } from './breeding.service';
 import { asyncHandler } from '../../utils/asyncHandler';
 import { sendSuccess, sendCreated, sendPaginated } from '../../utils/responseHandler';
@@ -9,7 +10,7 @@ import { PregnancyStatus } from '../../types';
  * @route   POST /api/v1/breeding
  * @access  Private
  */
-export const createInsemination = asyncHandler(async (req: Request, res: Response) => {
+export const createInsemination = asyncHandler(async (req: AuthRequest, res: Response) => {
   const { animalId, inseminationDate, doctorName, semenType, breed, notes } = req.body;
 
   const insemination = await breedingService.create({
@@ -19,6 +20,7 @@ export const createInsemination = asyncHandler(async (req: Request, res: Respons
     semenType,
     breed,
     notes,
+    userEmail: req.user?.email, // Pass the logged-in user's email
   });
 
   sendCreated(res, insemination, 'Insemination record created successfully');

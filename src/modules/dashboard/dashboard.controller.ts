@@ -4,12 +4,23 @@ import { asyncHandler } from '../../utils/asyncHandler';
 import { sendSuccess } from '../../utils/responseHandler';
 
 /**
+ * Helper to determine the period based on query params
+ * If startDate and endDate are provided, use 'custom' period
+ */
+const determinePeriod = (query: Request['query']): Period => {
+  if (query.startDate && query.endDate) {
+    return 'custom';
+  }
+  return (query.period as Period) || 'monthly';
+};
+
+/**
  * @desc    Get dashboard summary
  * @route   GET /api/v1/dashboard/summary
  * @access  Private
  */
 export const getDashboardSummary = asyncHandler(async (req: Request, res: Response) => {
-  const period = (req.query.period as Period) || 'monthly';
+  const period = determinePeriod(req.query);
   const startDate = req.query.startDate ? new Date(req.query.startDate as string) : undefined;
   const endDate = req.query.endDate ? new Date(req.query.endDate as string) : undefined;
 
@@ -23,7 +34,7 @@ export const getDashboardSummary = asyncHandler(async (req: Request, res: Respon
  * @access  Private
  */
 export const getMilkTrends = asyncHandler(async (req: Request, res: Response) => {
-  const period = (req.query.period as Period) || 'monthly';
+  const period = determinePeriod(req.query);
   const startDate = req.query.startDate ? new Date(req.query.startDate as string) : undefined;
   const endDate = req.query.endDate ? new Date(req.query.endDate as string) : undefined;
 
@@ -37,7 +48,7 @@ export const getMilkTrends = asyncHandler(async (req: Request, res: Response) =>
  * @access  Private
  */
 export const getExpenseTrends = asyncHandler(async (req: Request, res: Response) => {
-  const period = (req.query.period as Period) || 'monthly';
+  const period = determinePeriod(req.query);
   const startDate = req.query.startDate ? new Date(req.query.startDate as string) : undefined;
   const endDate = req.query.endDate ? new Date(req.query.endDate as string) : undefined;
 
@@ -51,7 +62,7 @@ export const getExpenseTrends = asyncHandler(async (req: Request, res: Response)
  * @access  Private
  */
 export const getProfitLossTrends = asyncHandler(async (req: Request, res: Response) => {
-  const period = (req.query.period as Period) || 'monthly';
+  const period = determinePeriod(req.query);
   const startDate = req.query.startDate ? new Date(req.query.startDate as string) : undefined;
   const endDate = req.query.endDate ? new Date(req.query.endDate as string) : undefined;
 
@@ -65,7 +76,7 @@ export const getProfitLossTrends = asyncHandler(async (req: Request, res: Respon
  * @access  Private
  */
 export const getCowMilkSummary = asyncHandler(async (req: Request, res: Response) => {
-  const period = (req.query.period as Period) || 'monthly';
+  const period = determinePeriod(req.query);
   const startDate = req.query.startDate ? new Date(req.query.startDate as string) : undefined;
   const endDate = req.query.endDate ? new Date(req.query.endDate as string) : undefined;
 
@@ -80,7 +91,7 @@ export const getCowMilkSummary = asyncHandler(async (req: Request, res: Response
  * @access  Private
  */
 export const getBuffaloMilkSummary = asyncHandler(async (req: Request, res: Response) => {
-  const period = (req.query.period as Period) || 'monthly';
+  const period = determinePeriod(req.query);
   const startDate = req.query.startDate ? new Date(req.query.startDate as string) : undefined;
   const endDate = req.query.endDate ? new Date(req.query.endDate as string) : undefined;
 
@@ -105,7 +116,7 @@ export const getAnimalStats = asyncHandler(async (_req: Request, res: Response) 
  * @access  Private
  */
 export const getBreedingStats = asyncHandler(async (req: Request, res: Response) => {
-  const period = (req.query.period as Period) || 'monthly';
+  const period = determinePeriod(req.query);
   const startDate = req.query.startDate ? new Date(req.query.startDate as string) : undefined;
   const endDate = req.query.endDate ? new Date(req.query.endDate as string) : undefined;
 
