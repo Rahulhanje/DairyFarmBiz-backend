@@ -64,8 +64,14 @@ class EmailService {
 
   /**
    * Check if email service is properly configured
+   * In dev mode, returns true even without transporter (emails are logged)
    */
   isReady(): boolean {
+    // In dev mode, always ready (emails will be logged)
+    if (DEV_MODE && this.isConfigured) {
+      return true;
+    }
+    // In production, need both configured flag and transporter
     return this.isConfigured && this.transporter !== null;
   }
 
@@ -170,7 +176,7 @@ class EmailService {
   ): Promise<EmailResult> {
     const animalName = animalInfo.nickName || animalInfo.serialNumber;
     const subject = `Pregnancy Check Reminder - ${animalName}`;
-    
+
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2 style="color: #2c5282;">🐄 Pregnancy Check Reminder</h2>

@@ -107,44 +107,27 @@ class BreedingService {
 
     // Automatically create EMAIL notification for pregnancy check
     try {
-      await Notification.create({
-        userId: new mongoose.Types.ObjectId(data.userId),
-        animal: new mongoose.Types.ObjectId(data.animalId),
-        insemination: insemination._id,
-        type: 'pregnancy_check',
-        channel: 'email',
-        status: 'pending',
-        scheduledDate: pregnancyCheckDate,
-        isSent: false,
-        subject: `Pregnancy Check Reminder - ${animal.serialNumber}`,
-        message: `Pregnancy check is due for ${animal.animalType} ${animal.serialNumber}${animal.nickName ? ` (${animal.nickName})` : ''}. Insemination was performed on ${inseminationDate.toLocaleDateString()}. Please schedule a pregnancy check.`,
-        recipientEmail: data.userEmail || config.notificationEmail || config.smtpUser,
-        metadata: {
-          animalSerialNumber: animal.serialNumber,
-          animalNickName: animal.nickName,
-          animalType: animal.animalType,
-          inseminationDate: inseminationDate.toISOString(),
-        },
-      });
-      console.log(`✅ Created EMAIL notification for animal ${animal.serialNumber} to ${data.userEmail || config.notificationEmail}`);
-    } catch (notificationError) {
-      console.error('Failed to create email notification:', notificationError);
-    }
+      // Determine recipient email with proper fallback
+      const recipientEmail = data.userEmail || config.notificationEmail || config.smtpUser;
 
-    // Automatically create WHATSAPP notification for pregnancy check if user has phone
-    if (data.userPhone) {
-      try {
+      if (!recipientEmail) {
+        console.error('⚠️  Cannot create email notification: No recipient email available');
+        console.error('   - data.userEmail:', data.userEmail);
+        console.error('   - config.notificationEmail:', config.notificationEmail);
+        console.error('   - config.smtpUser:', config.smtpUser);
+      } else {
         await Notification.create({
           userId: new mongoose.Types.ObjectId(data.userId),
           animal: new mongoose.Types.ObjectId(data.animalId),
           insemination: insemination._id,
           type: 'pregnancy_check',
-          channel: 'whatsapp',
+          channel: 'email',
           status: 'pending',
           scheduledDate: pregnancyCheckDate,
           isSent: false,
+          subject: `Pregnancy Check Reminder - ${animal.serialNumber}`,
           message: `Pregnancy check is due for ${animal.animalType} ${animal.serialNumber}${animal.nickName ? ` (${animal.nickName})` : ''}. Insemination was performed on ${inseminationDate.toLocaleDateString()}. Please schedule a pregnancy check.`,
-          recipientPhone: data.userPhone,
+          recipientEmail,
           metadata: {
             animalSerialNumber: animal.serialNumber,
             animalNickName: animal.nickName,
@@ -152,25 +135,51 @@ class BreedingService {
             inseminationDate: inseminationDate.toISOString(),
           },
         });
-        console.log(`✅ Created WHATSAPP notification for animal ${animal.serialNumber} to ${data.userPhone}`);
+        console.log(`✅ Created EMAIL notification for animal ${animal.serialNumber} to ${recipientEmail}`);
       } catch (notificationError) {
-        console.error('Failed to create WhatsApp notification:', notificationError);
+        console.error('Failed to create email notification:', notificationError);
       }
-    }
 
-    return insemination.populate('animal', 'serialNumber nickName animalType');
-  }
+      // Automatically create WHATSAPP notification for pregnancy check if user has phone
+      if (data.userPhone) {
+        try {
+          await Notification.create({
+            userId: new mongoose.Types.ObjectId(data.userId),
+            animal: new mongoose.Types.ObjectId(data.animalId),
+            insemination: insemination._id,
+            type: 'pregnancy_check',
+            channel: 'email',
+            status: 'pending',
+            scheduledDate: pregnancyCheckDate,
+            isSent: false,
+            message: `Pregnancy check is due for ${animal.animalType} ${animal.serialNumber}${animal.nickName ? ` (${animal.nickName})` : ''}. Insemination was performed on ${inseminationDate.toLocaleDateString()}. Please schedule a pregnancy check.`,
+            recipientPhone: data.userPhone,
+            metadata: {
+              animalSerialNumber: animal.serialNumber,
+              animalNickName: animal.nickName,
+              animalType: animal.animalType,
+              inseminationDate: inseminationDate.toISOString(),
+            },
+          });
+          console.log(`✅ Created WHATSAPP notification for animal ${animal.serialNumber} to ${data.userPhone}`);
+        } catch (notificationError) {
+          console.error('Failed to create WhatsApp notification:', notificationError);
+        }
+      }
+
+      return insemination.populate('animal', 'serialNumber nickName animalType');
+    }
 
   /**
    * Get all insemination records with filters
    */
   async getAll(
-    userId: string,
-    filter: InseminationFilter = {},
-    page = 1,
-    limit = 10
-  ): Promise<{ inseminations: IInsemination[]; total: number }> {
-    const query: Record<string, unknown> = {
+      userId: string,
+      filter: InseminationFilter = {},
+      page = 1,
+      limit = 10
+    ): Promise < { inseminations: IInsemination[]; total: number } > {
+      const query: Record<string, unknown> = {
       userId: new mongoose.Types.ObjectId(userId),
     };
 
@@ -236,7 +245,7 @@ class BreedingService {
       throw new NotFoundError('Animal not found');
     }
 
-    return Insemination.find({ 
+    return Insemination.find({
       animal: new mongoose.Types.ObjectId(animalId),
       userId: new mongoose.Types.ObjectId(userId),
     })
@@ -258,13 +267,13 @@ class BreedingService {
 
     // If insemination date changes, recalculate pregnancy check date
     let updateData: Record<string, unknown> = { ...data };
-    
+
     if (data.inseminationDate) {
       const inseminationDate = normalizeToUTCMidnight(data.inseminationDate);
-      
+
       const pregnancyCheckDate = new Date(inseminationDate);
       pregnancyCheckDate.setUTCDate(pregnancyCheckDate.getUTCDate() + 90);
-      
+
       updateData = {
         ...updateData,
         inseminationDate,
@@ -419,8 +428,8 @@ class BreedingService {
     const total = checkPending + pregnantConfirmed + failed + delivered;
     const successfulOutcomes = pregnantConfirmed + delivered;
     const completedCases = successfulOutcomes + failed;
-    const successRate = completedCases > 0 
-      ? Math.round((successfulOutcomes / completedCases) * 100) 
+    const successRate = completedCases > 0
+      ? Math.round((successfulOutcomes / completedCases) * 100)
       : 0;
 
     return {
