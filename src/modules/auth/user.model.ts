@@ -12,6 +12,7 @@ export interface IUser extends Document {
   countryCode?: string;
   role: UserRole;
   isActive: boolean;
+  isEmailVerified: boolean;
   createdAt: Date;
   updatedAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
@@ -62,6 +63,10 @@ const userSchema = new Schema<IUser>(
     isActive: {
       type: Boolean,
       default: true,
+    },
+    isEmailVerified: {
+      type: Boolean,
+      default: false,
     },
   },
   {

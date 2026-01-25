@@ -1,6 +1,8 @@
 import { User, IUser, UserRole } from './user.model';
 import { generateToken } from '../../middlewares/auth';
 import { BadRequestError, UnauthorizedError, ConflictError } from '../../utils/ApiError';
+import { emailService } from '../../utils/emailService';
+import bcrypt from 'bcryptjs';
 
 export interface SignupData {
   name: string;
@@ -39,7 +41,7 @@ class AuthService {
       throw new ConflictError('User with this email already exists');
     }
 
-    // Create new user
+    // Create new user (email not verified yet)
     const user = await User.create({
       name,
       email,
@@ -47,7 +49,11 @@ class AuthService {
       phone,
       countryCode: countryCode || '+91',
       role: role || 'staff',
+      isEmailVerified: false,
     });
+
+    // Send verification OTP
+    await emailService.createAndSendOTP(email, 'email_verification');
 
     // Generate token
     const token = generateToken({
@@ -126,6 +132,166 @@ class AuthService {
       throw new BadRequestError('User not found');
     }
     return user;
+  }
+
+  /**
+   * Update user profile
+   */
+  async updateProfile(
+    userId: string,
+    data: { name?: string; phone?: string; countryCode?: string }
+  ): Promise<Omit<IUser, 'passwordHash'>> {
+    const user = await User.findById(userId);
+    if (!user) {
+      throw new BadRequestError('User not found');
+    }
+
+    if (data.name) user.name = data.name;
+    if (data.phone !== undefined) user.phone = data.phone;
+    if (data.countryCode !== undefined) user.countryCode = data.countryCode;
+
+    await user.save();
+    return user;
+  }
+
+  /**
+   * Update password
+   */
+  async updatePassword(
+    userId: string,
+    currentPassword: string,
+    newPassword: string
+  ): Promise<void> {
+    const user = await User.findById(userId).select('+passwordHash');
+    if (!user) {
+      throw new BadRequestError('User not found');
+    }
+
+    // Verify current password
+    const isPasswordValid = await user.comparePassword(currentPassword);
+    if (!isPasswordValid) {
+      throw new UnauthorizedError('Current password is incorrect');
+    }
+
+    // Update password
+    user.passwordHash = newPassword; // Will be hashed by pre-save hook
+    await user.save();
+  }
+
+  /**
+   * Send verification OTP to email
+   */
+  async sendVerificationOTP(email: string): Promise<{ success: boolean; message: string }> {
+    console.log(`[AUTH] sendVerificationOTP called for email: ${email}`);
+    
+    // Check if user exists
+    const user = await User.findOne({ email });
+    if (!user) {
+      console.log(`[AUTH] User not found for email: ${email}`);
+      throw new BadRequestError('User not found');
+    }
+
+    console.log(`[AUTH] User found, isEmailVerified: ${user.isEmailVerified}`);
+
+    if (user.isEmailVerified) {
+      return {
+        success: false,
+        message: 'Email is already verified',
+      };
+    }
+
+    const result = await emailService.createAndSendOTP(email, 'email_verification');
+    console.log(`[AUTH] OTP send result:`, result);
+    return result;
+  }
+
+  /**
+   * Verify email with OTP
+   */
+  async verifyEmail(email: string, otp: string): Promise<{ success: boolean; message: string }> {
+    console.log(`[AUTH] verifyEmail called - Email: ${email}, OTP: ${otp}`);
+    
+    const user = await User.findOne({ email });
+    if (!user) {
+      console.log(`[AUTH] User not found for email: ${email}`);
+      throw new BadRequestError('User not found');
+    }
+
+    console.log(`[AUTH] User found, isEmailVerified: ${user.isEmailVerified}`);
+
+    if (user.isEmailVerified) {
+      return {
+        success: false,
+        message: 'Email is already verified',
+      };
+    }
+
+    const otpResult = await emailService.verifyOTP(email, otp, 'email_verification');
+    console.log(`[AUTH] OTP verification result:`, otpResult);
+    
+    if (!otpResult.valid) {
+      return {
+        success: false,
+        message: otpResult.message,
+      };
+    }
+
+    // Mark email as verified
+    user.isEmailVerified = true;
+    await user.save();
+    console.log(`[AUTH] Email verified successfully for: ${email}`);
+
+    return {
+      success: true,
+      message: 'Email verified successfully',
+    };
+  }
+
+  /**
+   * Send password reset OTP
+   */
+  async sendPasswordResetOTP(email: string): Promise<{ success: boolean; message: string }> {
+    const user = await User.findOne({ email });
+    if (!user) {
+      // For security, don't reveal if email exists
+      return {
+        success: true,
+        message: 'If the email exists, a password reset OTP has been sent',
+      };
+    }
+
+    return await emailService.createAndSendOTP(email, 'password_reset');
+  }
+
+  /**
+   * Reset password with OTP
+   */
+  async resetPassword(
+    email: string,
+    otp: string,
+    newPassword: string
+  ): Promise<{ success: boolean; message: string }> {
+    const user = await User.findOne({ email }).select('+passwordHash');
+    if (!user) {
+      throw new BadRequestError('User not found');
+    }
+
+    const otpResult = await emailService.verifyOTP(email, otp, 'password_reset');
+    if (!otpResult.valid) {
+      return {
+        success: false,
+        message: otpResult.message,
+      };
+    }
+
+    // Update password
+    user.passwordHash = newPassword; // Will be hashed by pre-save hook
+    await user.save();
+
+    return {
+      success: true,
+      message: 'Password reset successfully',
+    };
   }
 }
 

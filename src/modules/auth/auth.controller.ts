@@ -51,3 +51,91 @@ export const getMe = asyncHandler(async (req: AuthRequest, res: Response) => {
 
   sendSuccess(res, user, 'Profile fetched successfully');
 });
+
+/**
+ * @desc    Update user profile
+ * @route   PUT /api/v1/auth/profile
+ * @access  Private
+ */
+export const updateProfile = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const userId = req.user?.id!;
+  const { name, phone, countryCode } = req.body;
+
+  const user = await authService.updateProfile(userId, { name, phone, countryCode });
+
+  sendSuccess(res, user, 'Profile updated successfully');
+});
+
+/**
+ * @desc    Update password
+ * @route   PUT /api/v1/auth/password
+ * @access  Private
+ */
+export const updatePassword = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const userId = req.user?.id!;
+  const { currentPassword, newPassword } = req.body;
+
+  await authService.updatePassword(userId, currentPassword, newPassword);
+
+  sendSuccess(res, null, 'Password updated successfully');
+});
+
+/**
+ * @desc    Send verification OTP
+ * @route   POST /api/v1/auth/send-verification-otp
+ * @access  Public
+ */
+export const sendVerificationOTP = asyncHandler(async (req: Request, res: Response) => {
+  const { email } = req.body;
+
+  const result = await authService.sendVerificationOTP(email);
+
+  sendSuccess(res, result, result.message);
+});
+
+/**
+ * @desc    Verify email with OTP
+ * @route   POST /api/v1/auth/verify-email
+ * @access  Public
+ */
+export const verifyEmail = asyncHandler(async (req: Request, res: Response) => {
+  const { email, otp } = req.body;
+
+  const result = await authService.verifyEmail(email, otp);
+
+  if (!result.success) {
+    return sendSuccess(res, result, result.message, 400);
+  }
+
+  sendSuccess(res, result, result.message);
+});
+
+/**
+ * @desc    Send password reset OTP
+ * @route   POST /api/v1/auth/forgot-password
+ * @access  Public
+ */
+export const forgotPassword = asyncHandler(async (req: Request, res: Response) => {
+  const { email } = req.body;
+
+  const result = await authService.sendPasswordResetOTP(email);
+
+  sendSuccess(res, result, result.message);
+});
+
+/**
+ * @desc    Reset password with OTP
+ * @route   POST /api/v1/auth/reset-password
+ * @access  Public
+ */
+export const resetPassword = asyncHandler(async (req: Request, res: Response) => {
+  const { email, otp, newPassword } = req.body;
+
+  const result = await authService.resetPassword(email, otp, newPassword);
+
+  if (!result.success) {
+    return sendSuccess(res, result, result.message, 400);
+  }
+
+  sendSuccess(res, result, result.message);
+});
