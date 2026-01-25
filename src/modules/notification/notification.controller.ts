@@ -25,6 +25,13 @@ export const createNotification = asyncHandler(async (req: AuthRequest, res: Res
     recipientPhone,
   } = req.body;
 
+  // For email channel, ensure recipientEmail is set with fallback
+  let finalRecipientEmail = recipientEmail;
+  if (channel === 'email' && !finalRecipientEmail) {
+    finalRecipientEmail = req.user?.email || process.env.NOTIFICATION_EMAIL || process.env.SMTP_USER;
+    console.log('📧 Custom notification - using fallback email:', finalRecipientEmail);
+  }
+
   const notification = await notificationService.create({
     userId: req.user?.id!,
     animalId,
@@ -34,7 +41,7 @@ export const createNotification = asyncHandler(async (req: AuthRequest, res: Res
     scheduledDate: new Date(scheduledDate),
     message,
     subject,
-    recipientEmail,
+    recipientEmail: finalRecipientEmail,
     recipientPhone,
   });
 
@@ -229,7 +236,7 @@ export const runCronManually = asyncHandler(async (_req: AuthRequest, res: Respo
  */
 export const createImmediateTestNotification = asyncHandler(async (req: AuthRequest, res: Response) => {
   const userEmail = req.user?.email;
-  
+
   if (!userEmail) {
     return sendSuccess(res, { error: 'User email not found' }, 'Failed to create test notification');
   }
