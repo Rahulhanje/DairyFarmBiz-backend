@@ -33,10 +33,26 @@ export const createNotification = asyncHandler(async (req: AuthRequest, res: Res
   }
 
   // Parse scheduledDate correctly to avoid timezone issues
-  // If scheduledDate is already a Date object, use it; otherwise parse it
-  const parsedScheduledDate = scheduledDate instanceof Date
-    ? scheduledDate
-    : new Date(scheduledDate);
+  // The date coming from frontend might be in local time (IST) or UTC
+  let parsedScheduledDate: Date;
+
+  if (scheduledDate instanceof Date) {
+    parsedScheduledDate = scheduledDate;
+  } else if (typeof scheduledDate === 'string') {
+    // If the string has timezone info (Z or +/-), use it directly
+    // Otherwise, assume it's in IST and needs to be converted to UTC
+    if (scheduledDate.includes('Z') || scheduledDate.includes('+') || scheduledDate.includes('-')) {
+      // Has timezone info, parse it normally
+      parsedScheduledDate = new Date(scheduledDate);
+    } else {
+      // No timezone info - treat as IST (UTC+5:30)
+      // Parse the date and subtract 5:30 hours to get UTC
+      const localDate = new Date(scheduledDate);
+      parsedScheduledDate = new Date(localDate.getTime() - (5.5 * 60 * 60 * 1000));
+    }
+  } else {
+    parsedScheduledDate = new Date(scheduledDate);
+  }
 
   console.log('📅 Notification scheduledDate:', {
     received: scheduledDate,
