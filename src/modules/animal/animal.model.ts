@@ -123,12 +123,12 @@ const animalSchema = new Schema<IAnimal>(
   }
 );
 
-// Compound unique index: serialNumber must be unique per animalType
-animalSchema.index({ serialNumber: 1, animalType: 1 }, { unique: true });
+// Compound unique index: serialNumber must be unique per user per animalType
+animalSchema.index({ userId: 1, serialNumber: 1, animalType: 1 }, { unique: true });
 
 // Index for common queries
-animalSchema.index({ animalType: 1 });
-animalSchema.index({ isSold: 1 });
-animalSchema.index({ isActive: 1 });
+animalSchema.index({ userId: 1, animalType: 1 });
+animalSchema.index({ userId: 1, isSold: 1 });
+animalSchema.index({ userId: 1, isActive: 1 });
 
 export const Animal = mongoose.model<IAnimal>('Animal', animalSchema);

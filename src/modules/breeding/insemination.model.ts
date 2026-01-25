@@ -85,11 +85,11 @@ const inseminationSchema = new Schema<IInsemination>(
 );
 
 // Indexes for common queries
-inseminationSchema.index({ animal: 1 });
-inseminationSchema.index({ inseminationDate: -1 });
-inseminationSchema.index({ pregnancyCheckDate: 1 });
-inseminationSchema.index({ pregnancyStatus: 1 });
-inseminationSchema.index({ notificationSent: 1, pregnancyStatus: 1 });
+inseminationSchema.index({ userId: 1, animal: 1 });
+inseminationSchema.index({ userId: 1, inseminationDate: -1 });
+inseminationSchema.index({ userId: 1, pregnancyCheckDate: 1 });
+inseminationSchema.index({ userId: 1, pregnancyStatus: 1 });
+inseminationSchema.index({ userId: 1, notificationSent: 1, pregnancyStatus: 1 });
 
 // Pre-save hook to auto-calculate pregnancy check date
 inseminationSchema.pre('save', function (next) {

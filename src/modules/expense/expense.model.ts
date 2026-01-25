@@ -62,8 +62,8 @@ const expenseSchema = new Schema<IExpense>(
 );
 
 // Indexes for common queries
-expenseSchema.index({ date: -1 });
-expenseSchema.index({ category: 1 });
-expenseSchema.index({ date: -1, category: 1 });
+expenseSchema.index({ userId: 1, date: -1 });
+expenseSchema.index({ userId: 1, category: 1 });
+expenseSchema.index({ userId: 1, date: -1, category: 1 });
 
 export const Expense = mongoose.model<IExpense>('Expense', expenseSchema);
