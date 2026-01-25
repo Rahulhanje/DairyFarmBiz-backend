@@ -383,25 +383,15 @@ class NotificationService {
    */
   async getStatistics(userId: string): Promise<{
     total: number;
-    byStatus: Record<string, number>;
-    byType: Record<string, number>;
-    byChannel: Record<string, number>;
+    pending: number;
+    sent: number;
+    cancelled: number;
   }> {
     const userIdObj = new mongoose.Types.ObjectId(userId);
     
-    const [byStatusResult, byTypeResult, byChannelResult] = await Promise.all([
-      Notification.aggregate([
-        { $match: { userId: userIdObj } },
-        { $group: { _id: '$status', count: { $sum: 1 } } },
-      ]),
-      Notification.aggregate([
-        { $match: { userId: userIdObj } },
-        { $group: { _id: '$type', count: { $sum: 1 } } },
-      ]),
-      Notification.aggregate([
-        { $match: { userId: userIdObj } },
-        { $group: { _id: '$channel', count: { $sum: 1 } } },
-      ]),
+    const byStatusResult = await Notification.aggregate([
+      { $match: { userId: userIdObj } },
+      { $group: { _id: '$status', count: { $sum: 1 } } },
     ]);
 
     const byStatus: Record<string, number> = {};
@@ -411,17 +401,12 @@ class NotificationService {
       total += item.count;
     }
 
-    const byType: Record<string, number> = {};
-    for (const item of byTypeResult) {
-      byType[item._id] = item.count;
-    }
-
-    const byChannel: Record<string, number> = {};
-    for (const item of byChannelResult) {
-      byChannel[item._id] = item.count;
-    }
-
-    return { total, byStatus, byType, byChannel };
+    return { 
+      total, 
+      pending: byStatus['pending'] || 0,
+      sent: byStatus['sent'] || 0,
+      cancelled: byStatus['cancelled'] || 0,
+    };
   }
 }
 
