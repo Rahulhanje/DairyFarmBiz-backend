@@ -39,16 +39,23 @@ export const createNotification = asyncHandler(async (req: AuthRequest, res: Res
   if (scheduledDate instanceof Date) {
     parsedScheduledDate = scheduledDate;
   } else if (typeof scheduledDate === 'string') {
-    // If the string has timezone info (Z or +/-), use it directly
-    // Otherwise, assume it's in IST and needs to be converted to UTC
-    if (scheduledDate.includes('Z') || scheduledDate.includes('+') || scheduledDate.includes('-')) {
+    // Check if string has timezone info by looking for 'Z' or timezone offset pattern
+    // Examples: "2026-01-26T05:08:00Z" or "2026-01-26T05:08:00+05:30"
+    // NOT: "2026-01-26T05:08:00" (this has '-' in date but no timezone)
+    const hasTimezone = scheduledDate.endsWith('Z') ||
+      /[+-]\d{2}:\d{2}$/.test(scheduledDate) ||
+      /[+-]\d{4}$/.test(scheduledDate);
+
+    if (hasTimezone) {
       // Has timezone info, parse it normally
       parsedScheduledDate = new Date(scheduledDate);
+      console.log('📅 Date has timezone, parsing normally');
     } else {
       // No timezone info - treat as IST (UTC+5:30)
-      // Parse the date and subtract 5:30 hours to get UTC
+      // Parse the date and subtract 5:30 hours to convert IST to UTC
       const localDate = new Date(scheduledDate);
       parsedScheduledDate = new Date(localDate.getTime() - (5.5 * 60 * 60 * 1000));
+      console.log('📅 Date has NO timezone, treating as IST and converting to UTC');
     }
   } else {
     parsedScheduledDate = new Date(scheduledDate);
