@@ -142,7 +142,7 @@ class DashboardService {
     userId: string
   ): Promise<MilkSummary> {
     const matchStage = {
-      userId,
+      userId: new mongoose.Types.ObjectId(userId),
       animalType,
       date: {
         $gte: dateRange.startDate,
@@ -210,7 +210,7 @@ class DashboardService {
     const result = await Expense.aggregate([
       {
         $match: {
-          userId,
+          userId: new mongoose.Types.ObjectId(userId),
           date: {
             $gte: dateRange.startDate,
             $lte: dateRange.endDate,
@@ -248,7 +248,7 @@ class DashboardService {
   }> {
     const result = await Animal.aggregate([
       {
-        $match: { userId },
+        $match: { userId: new mongoose.Types.ObjectId(userId) },
       },
       {
         $group: {
@@ -306,7 +306,7 @@ class DashboardService {
     const result = await Insemination.aggregate([
       {
         $match: {
-          userId,
+          userId: new mongoose.Types.ObjectId(userId),
           inseminationDate: {
             $gte: dateRange.startDate,
             $lte: dateRange.endDate,
@@ -457,7 +457,7 @@ class DashboardService {
     const result = await MilkCollection.aggregate([
       {
         $match: {
-          userId,
+          userId: new mongoose.Types.ObjectId(userId!),
           date: {
             $gte: dateRange.startDate,
             $lte: dateRange.endDate,
@@ -563,7 +563,7 @@ class DashboardService {
     const result = await Expense.aggregate([
       {
         $match: {
-          userId,
+          userId: new mongoose.Types.ObjectId(userId!),
           date: {
             $gte: dateRange.startDate,
             $lte: dateRange.endDate,
