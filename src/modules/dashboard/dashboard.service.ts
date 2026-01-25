@@ -294,7 +294,7 @@ class DashboardService {
   }
 
   /**
-   * Get breeding statistics
+   * Get breeding statistics (shows current status, not filtered by date)
    */
   async getBreedingStats(dateRange: DateRange, userId: string): Promise<{
     totalInseminations: number;
@@ -303,14 +303,11 @@ class DashboardService {
     failed: number;
     delivered: number;
   }> {
+    // Get current breeding status (not filtered by insemination date)
     const result = await Insemination.aggregate([
       {
         $match: {
           userId: new mongoose.Types.ObjectId(userId),
-          inseminationDate: {
-            $gte: dateRange.startDate,
-            $lte: dateRange.endDate,
-          },
         },
       },
       {
