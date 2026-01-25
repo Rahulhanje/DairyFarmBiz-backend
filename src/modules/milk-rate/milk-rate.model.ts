@@ -42,10 +42,10 @@ const milkRateSchema = new Schema<IMilkRate>(
   }
 );
 
-// Compound unique index: only one rate per animalType per effectiveFrom date
-milkRateSchema.index({ animalType: 1, effectiveFrom: 1 }, { unique: true });
+// Compound unique index: only one rate per user per animalType per effectiveFrom date
+milkRateSchema.index({ userId: 1, animalType: 1, effectiveFrom: 1 }, { unique: true });
 
 // Index for fetching rates by date
-milkRateSchema.index({ animalType: 1, effectiveFrom: -1 });
+milkRateSchema.index({ userId: 1, animalType: 1, effectiveFrom: -1 });
 
 export const MilkRate = mongoose.model<IMilkRate>('MilkRate', milkRateSchema);
