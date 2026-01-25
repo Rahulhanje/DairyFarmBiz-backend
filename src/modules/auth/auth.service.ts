@@ -52,18 +52,25 @@ class AuthService {
       isEmailVerified: false,
     });
 
-    // Send verification OTP (non-blocking - don't fail signup if email fails)
-    const otpResult = await emailService.createAndSendOTP(email, 'email_verification');
-    
-    // Log email status but don't block user registration
-    if (!emailService.isServiceConfigured()) {
-      console.warn('⚠️  Email service not configured. User registered but verification email not sent.');
-    } else if (!otpResult.success) {
-      console.warn('⚠️  Failed to send verification email:', otpResult.message);
-      console.warn('User can resend verification email later.');
-    } else {
-      console.log('✅ Verification email sent successfully to:', email);
-    }
+    // Send verification OTP in background (truly non-blocking - don't await)
+    // This prevents signup timeout while still sending the email
+    (async () => {
+      try {
+        if (!emailService.isServiceConfigured()) {
+          console.warn('⚠️  Email service not configured. User registered but verification email not sent.');
+          return;
+        }
+        const otpResult = await emailService.createAndSendOTP(email, 'email_verification');
+        if (!otpResult.success) {
+          console.warn('⚠️  Failed to send verification email:', otpResult.message);
+          console.warn('User can resend verification email later.');
+        } else {
+          console.log('✅ Verification email sent successfully to:', email);
+        }
+      } catch (err) {
+        console.error('⚠️  Error sending verification email:', err);
+      }
+    })();
 
     // Generate token
     const token = generateToken({
@@ -104,7 +111,7 @@ class AuthService {
     // Check password
     const isPasswordValid = await user.comparePassword(password);
     console.log('[DEBUG] Password valid:', isPasswordValid);
-    
+
     if (!isPasswordValid) {
       throw new UnauthorizedError('Invalid email or password');
     }
@@ -193,7 +200,7 @@ class AuthService {
    */
   async sendVerificationOTP(email: string): Promise<{ success: boolean; message: string }> {
     console.log(`[AUTH] sendVerificationOTP called for email: ${email}`);
-    
+
     // Check if user exists
     const user = await User.findOne({ email });
     if (!user) {
@@ -217,11 +224,11 @@ class AuthService {
 
     const result = await emailService.createAndSendOTP(email, 'email_verification');
     console.log(`[AUTH] OTP send result:`, result);
-    
+
     if (!result.success) {
       throw new BadRequestError(result.message || 'Failed to send verification email');
     }
-    
+
     return result;
   }
 
@@ -230,7 +237,7 @@ class AuthService {
    */
   async verifyEmail(email: string, otp: string): Promise<{ success: boolean; message: string }> {
     console.log(`[AUTH] verifyEmail called - Email: ${email}, OTP: ${otp}`);
-    
+
     const user = await User.findOne({ email });
     if (!user) {
       console.log(`[AUTH] User not found for email: ${email}`);
@@ -248,7 +255,7 @@ class AuthService {
 
     const otpResult = await emailService.verifyOTP(email, otp, 'email_verification');
     console.log(`[AUTH] OTP verification result:`, otpResult);
-    
+
     if (!otpResult.valid) {
       return {
         success: false,
@@ -286,11 +293,11 @@ class AuthService {
     }
 
     const result = await emailService.createAndSendOTP(email, 'password_reset');
-    
+
     if (!result.success) {
       throw new BadRequestError(result.message || 'Failed to send password reset email');
     }
-    
+
     return result;
   }
 
