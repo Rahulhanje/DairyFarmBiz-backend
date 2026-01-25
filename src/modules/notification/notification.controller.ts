@@ -32,13 +32,25 @@ export const createNotification = asyncHandler(async (req: AuthRequest, res: Res
     console.log('📧 Custom notification - using fallback email:', finalRecipientEmail);
   }
 
+  // Parse scheduledDate correctly to avoid timezone issues
+  // If scheduledDate is already a Date object, use it; otherwise parse it
+  const parsedScheduledDate = scheduledDate instanceof Date
+    ? scheduledDate
+    : new Date(scheduledDate);
+
+  console.log('📅 Notification scheduledDate:', {
+    received: scheduledDate,
+    parsed: parsedScheduledDate.toISOString(),
+    localTime: parsedScheduledDate.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })
+  });
+
   const notification = await notificationService.create({
     userId: req.user?.id!,
     animalId,
     inseminationId,
     type,
     channel,
-    scheduledDate: new Date(scheduledDate),
+    scheduledDate: parsedScheduledDate,
     message,
     subject,
     recipientEmail: finalRecipientEmail,
