@@ -68,15 +68,15 @@ const milkCollectionSchema = new Schema<IMilkCollection>(
   }
 );
 
-// Compound unique index: only one entry per date + session + animalType
+// Compound unique index: only one entry per user per date + session + animalType
 milkCollectionSchema.index(
-  { date: 1, session: 1, animalType: 1 },
+  { userId: 1, date: 1, session: 1, animalType: 1 },
   { unique: true }
 );
 
 // Indexes for common queries
-milkCollectionSchema.index({ date: -1 });
-milkCollectionSchema.index({ animalType: 1, date: -1 });
+milkCollectionSchema.index({ userId: 1, date: -1 });
+milkCollectionSchema.index({ userId: 1, animalType: 1, date: -1 });
 
 export const MilkCollection = mongoose.model<IMilkCollection>(
   'MilkCollection',
