@@ -17,6 +17,7 @@ import { breedingRoutes } from './modules/breeding';
 import { pregnancyStatusRoutes } from './modules/pregnancy-status';
 import { notificationRoutes } from './modules/notification';
 import { dashboardRoutes } from './modules/dashboard';
+import { reportRoutes } from './modules/report';
 
 const app: Application = express();
 
@@ -56,6 +57,7 @@ app.use('/api/v1/breeding', breedingRoutes);
 app.use('/api/v1/pregnancy-status', pregnancyStatusRoutes);
 app.use('/api/v1/notifications', notificationRoutes);
 app.use('/api/v1/dashboard', dashboardRoutes);
+app.use('/api/v1/reports', reportRoutes);
 
 // 404 Handler
 app.use(notFoundHandler);
