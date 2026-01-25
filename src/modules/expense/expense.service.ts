@@ -202,14 +202,35 @@ class ExpenseService {
   }
 
   /**
-   * Get expenses summary by category
+   * Get expenses summary by category with optional filters
    */
-  async getSummaryByCategory(userId: string): Promise<Array<{ category: string; total: number; count: number }>> {
+  async getSummaryByCategory(
+    userId: string,
+    filter: ExpenseFilter = {}
+  ): Promise<{ total: number; byCategory: Array<{ category: string; amount: number; count: number }> }> {
+    const matchQuery: Record<string, unknown> = {
+      userId: new mongoose.Types.ObjectId(userId),
+    };
+
+    // Apply date filter if provided
+    if (filter.startDate || filter.endDate) {
+      matchQuery.date = {};
+      if (filter.startDate) {
+        (matchQuery.date as Record<string, Date>).$gte = normalizeToUTCMidnight(filter.startDate);
+      }
+      if (filter.endDate) {
+        (matchQuery.date as Record<string, Date>).$lte = getUTCEndOfDay(filter.endDate);
+      }
+    }
+
+    // Apply category filter if provided
+    if (filter.category) {
+      matchQuery.category = filter.category;
+    }
+
     const result = await Expense.aggregate([
       {
-        $match: {
-          userId: new mongoose.Types.ObjectId(userId),
-        },
+        $match: matchQuery,
       },
       {
         $group: {
@@ -222,16 +243,22 @@ class ExpenseService {
         $project: {
           _id: 0,
           category: '$_id',
-          total: 1,
+          amount: '$total',
           count: 1,
         },
       },
       {
-        $sort: { total: -1 },
+        $sort: { amount: -1 },
       },
     ]);
 
-    return result;
+    // Calculate grand total
+    const grandTotal = result.reduce((sum, item) => sum + item.amount, 0);
+
+    return {
+      total: grandTotal,
+      byCategory: result,
+    };
   }
 }
 

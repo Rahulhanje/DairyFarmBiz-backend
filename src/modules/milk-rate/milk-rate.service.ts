@@ -66,7 +66,7 @@ class MilkRateService {
 
     // Recalculate all affected milk collections
     const milkCollectionService = getMilkCollectionService();
-    await milkCollectionService.recalculateByRate(data.animalType, effectiveDate);
+    await milkCollectionService.recalculateByRate(data.userId, data.animalType, effectiveDate);
 
     return milkRate;
   }
@@ -168,7 +168,7 @@ class MilkRateService {
 
     // Recalculate all affected milk collections
     const milkCollectionService = getMilkCollectionService();
-    await milkCollectionService.recalculateByRate(rate.animalType, rate.effectiveFrom);
+    await milkCollectionService.recalculateByRate(userId, rate.animalType, rate.effectiveFrom);
 
     return rate;
   }

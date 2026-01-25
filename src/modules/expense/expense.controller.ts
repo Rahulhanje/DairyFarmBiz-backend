@@ -106,11 +106,23 @@ export const getExpensesTotal = asyncHandler(async (req: AuthRequest, res: Respo
 });
 
 /**
- * @desc    Get expenses summary by category
+ * @desc    Get expenses summary by category with optional filters
  * @route   GET /api/v1/expenses/summary
  * @access  Private
  */
 export const getExpensesSummary = asyncHandler(async (req: AuthRequest, res: Response) => {
-  const summary = await expenseService.getSummaryByCategory(req.user?.id!);
+  const filter: Record<string, unknown> = {};
+
+  if (req.query.startDate) {
+    filter.startDate = new Date(req.query.startDate as string);
+  }
+  if (req.query.endDate) {
+    filter.endDate = new Date(req.query.endDate as string);
+  }
+  if (req.query.category) {
+    filter.category = req.query.category;
+  }
+
+  const summary = await expenseService.getSummaryByCategory(req.user?.id!, filter);
   sendSuccess(res, summary, 'Expenses summary fetched successfully');
 });
