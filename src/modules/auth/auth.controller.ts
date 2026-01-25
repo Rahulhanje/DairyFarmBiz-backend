@@ -10,12 +10,14 @@ import { AuthRequest } from '../../types';
  * @access  Public
  */
 export const signup = asyncHandler(async (req: Request, res: Response) => {
-  const { name, email, password, role } = req.body;
+  const { name, email, password, phone, countryCode, role } = req.body;
 
   const result = await authService.signup({
     name,
     email,
     password,
+    phone,
+    countryCode,
     role,
   });
 
