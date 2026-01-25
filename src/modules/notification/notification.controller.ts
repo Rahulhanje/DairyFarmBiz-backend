@@ -217,8 +217,12 @@ export const getEmailStatus = asyncHandler(async (_req: AuthRequest, res: Respon
   const isReady = emailService.isReady();
   const isConnected = isReady ? await emailService.verifyConnection() : false;
 
+  // In production, show as active if isReady is true
+  // Verification can fail even when emails work (Gmail restrictions, etc.)
   sendSuccess(res, {
-    isActive: isReady && isConnected,
+    isActive: isReady, // Changed from: isReady && isConnected
+    isReady,
+    isConnected,
     lastChecked: new Date().toISOString(),
   }, 'Email service status fetched');
 });
