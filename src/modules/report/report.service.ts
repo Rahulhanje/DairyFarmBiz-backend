@@ -104,7 +104,7 @@ class ReportService {
       userId,
       inseminationDate: { $gte: startDate, $lte: endDate },
     })
-      .populate('animal', 'tagNumber name')
+      .populate('animal', 'serialNumber nickName')
       .lean() as any[];
 
     // Fetch milk rates
@@ -119,7 +119,7 @@ class ReportService {
     const totalMilkLiters = milkCollections.reduce((sum: number, mc: any) => sum + (mc.totalMilk || 0), 0);
     const totalMilkRevenue = milkCollections.reduce((sum: number, mc: any) => sum + (mc.totalAmount || 0), 0);
     const totalExpenses = expenses.reduce((sum: number, exp: any) => sum + (exp.amount || 0), 0);
-    const activeAnimals = animals.filter((a: any) => a.status === 'active').length;
+    const activeAnimals = animals.filter((a: any) => a.isActive && !a.isSold).length;
 
     return {
       animals,
@@ -241,13 +241,14 @@ class ReportService {
 
     // Data
     animals.forEach(animal => {
+      const status = animal.isSold ? 'sold' : (animal.isActive ? 'active' : 'inactive');
       sheet.addRow([
-        animal.tagNumber || 'N/A',
-        animal.name || 'N/A',
-        animal.type || 'N/A',
-        animal.gender || 'N/A',
-        animal.dateOfBirth ? this.formatDate(new Date(animal.dateOfBirth)) : 'N/A',
-        animal.status || 'N/A',
+        animal.serialNumber || '-',
+        animal.nickName || '-',
+        animal.animalType || '-',
+        animal.gender || '-',
+        animal.dateOfBirth ? this.formatDate(new Date(animal.dateOfBirth)) : '-',
+        status,
         animal.purchasePrice || 0,
       ]);
     });
@@ -332,13 +333,13 @@ class ReportService {
     breeding.forEach(b => {
       sheet.addRow([
         this.formatDate(new Date(b.inseminationDate)),
-        b.animal?.tagNumber || 'N/A',
-        b.animal?.name || 'N/A',
-        b.doctorName || 'N/A',
-        b.semenType || 'N/A',
-        b.breed || 'N/A',
-        b.pregnancyStatus,
-        b.pregnancyCheckDate ? this.formatDate(new Date(b.pregnancyCheckDate)) : 'N/A',
+        b.animal?.serialNumber || '-',
+        b.animal?.nickName || '-',
+        b.doctorName || '-',
+        b.semenType || '-',
+        b.breed || '-',
+        b.pregnancyStatus || '-',
+        b.pregnancyCheckDate ? this.formatDate(new Date(b.pregnancyCheckDate)) : '-',
       ]);
     });
 

@@ -176,8 +176,8 @@ export const getEmailStatus = asyncHandler(async (_req: AuthRequest, res: Respon
   const isConnected = isReady ? await emailService.verifyConnection() : false;
 
   sendSuccess(res, {
-    configured: isReady,
-    connected: isConnected,
+    isActive: isReady && isConnected,
+    lastChecked: new Date().toISOString(),
   }, 'Email service status fetched');
 });
 
