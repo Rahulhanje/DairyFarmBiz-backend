@@ -136,50 +136,51 @@ class BreedingService {
           },
         });
         console.log(`✅ Created EMAIL notification for animal ${animal.serialNumber} to ${recipientEmail}`);
-      } catch (notificationError) {
-        console.error('Failed to create email notification:', notificationError);
       }
-
-      // Automatically create WHATSAPP notification for pregnancy check if user has phone
-      if (data.userPhone) {
-        try {
-          await Notification.create({
-            userId: new mongoose.Types.ObjectId(data.userId),
-            animal: new mongoose.Types.ObjectId(data.animalId),
-            insemination: insemination._id,
-            type: 'pregnancy_check',
-            channel: 'email',
-            status: 'pending',
-            scheduledDate: pregnancyCheckDate,
-            isSent: false,
-            message: `Pregnancy check is due for ${animal.animalType} ${animal.serialNumber}${animal.nickName ? ` (${animal.nickName})` : ''}. Insemination was performed on ${inseminationDate.toLocaleDateString()}. Please schedule a pregnancy check.`,
-            recipientPhone: data.userPhone,
-            metadata: {
-              animalSerialNumber: animal.serialNumber,
-              animalNickName: animal.nickName,
-              animalType: animal.animalType,
-              inseminationDate: inseminationDate.toISOString(),
-            },
-          });
-          console.log(`✅ Created WHATSAPP notification for animal ${animal.serialNumber} to ${data.userPhone}`);
-        } catch (notificationError) {
-          console.error('Failed to create WhatsApp notification:', notificationError);
-        }
-      }
-
-      return insemination.populate('animal', 'serialNumber nickName animalType');
+    } catch (notificationError) {
+      console.error('Failed to create email notification:', notificationError);
     }
+
+    // Automatically create WHATSAPP notification for pregnancy check if user has phone
+    if (data.userPhone) {
+      try {
+        await Notification.create({
+          userId: new mongoose.Types.ObjectId(data.userId),
+          animal: new mongoose.Types.ObjectId(data.animalId),
+          insemination: insemination._id,
+          type: 'pregnancy_check',
+          channel: 'email',
+          status: 'pending',
+          scheduledDate: pregnancyCheckDate,
+          isSent: false,
+          message: `Pregnancy check is due for ${animal.animalType} ${animal.serialNumber}${animal.nickName ? ` (${animal.nickName})` : ''}. Insemination was performed on ${inseminationDate.toLocaleDateString()}. Please schedule a pregnancy check.`,
+          recipientPhone: data.userPhone,
+          metadata: {
+            animalSerialNumber: animal.serialNumber,
+            animalNickName: animal.nickName,
+            animalType: animal.animalType,
+            inseminationDate: inseminationDate.toISOString(),
+          },
+        });
+        console.log(`✅ Created WHATSAPP notification for animal ${animal.serialNumber} to ${data.userPhone}`);
+      } catch (notificationError) {
+        console.error('Failed to create WhatsApp notification:', notificationError);
+      }
+    }
+
+    return insemination.populate('animal', 'serialNumber nickName animalType');
+  }
 
   /**
    * Get all insemination records with filters
    */
   async getAll(
-      userId: string,
-      filter: InseminationFilter = {},
-      page = 1,
-      limit = 10
-    ): Promise < { inseminations: IInsemination[]; total: number } > {
-      const query: Record<string, unknown> = {
+    userId: string,
+    filter: InseminationFilter = {},
+    page = 1,
+    limit = 10
+  ): Promise<{ inseminations: IInsemination[]; total: number }> {
+    const query: Record<string, unknown> = {
       userId: new mongoose.Types.ObjectId(userId),
     };
 
