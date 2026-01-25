@@ -53,7 +53,15 @@ class AuthService {
     });
 
     // Send verification OTP
-    await emailService.createAndSendOTP(email, 'email_verification');
+    const otpResult = await emailService.createAndSendOTP(email, 'email_verification');
+    
+    // Check if email service is configured and OTP was sent
+    if (!emailService.isServiceConfigured()) {
+      console.warn('⚠️  Email service not configured. User registered but verification email not sent.');
+    } else if (!otpResult.success) {
+      console.error('❌ Failed to send verification email:', otpResult.message);
+      throw new BadRequestError('User registered but failed to send verification email. Please contact support.');
+    }
 
     // Generate token
     const token = generateToken({
@@ -200,8 +208,18 @@ class AuthService {
       };
     }
 
+    // Check if email service is configured
+    if (!emailService.isServiceConfigured()) {
+      throw new BadRequestError('Email service is not configured. Please contact support.');
+    }
+
     const result = await emailService.createAndSendOTP(email, 'email_verification');
     console.log(`[AUTH] OTP send result:`, result);
+    
+    if (!result.success) {
+      throw new BadRequestError(result.message || 'Failed to send verification email');
+    }
+    
     return result;
   }
 
@@ -260,7 +278,18 @@ class AuthService {
       };
     }
 
-    return await emailService.createAndSendOTP(email, 'password_reset');
+    // Check if email service is configured
+    if (!emailService.isServiceConfigured()) {
+      throw new BadRequestError('Email service is not configured. Please contact support.');
+    }
+
+    const result = await emailService.createAndSendOTP(email, 'password_reset');
+    
+    if (!result.success) {
+      throw new BadRequestError(result.message || 'Failed to send password reset email');
+    }
+    
+    return result;
   }
 
   /**
