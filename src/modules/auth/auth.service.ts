@@ -52,15 +52,17 @@ class AuthService {
       isEmailVerified: false,
     });
 
-    // Send verification OTP
+    // Send verification OTP (non-blocking - don't fail signup if email fails)
     const otpResult = await emailService.createAndSendOTP(email, 'email_verification');
     
-    // Check if email service is configured and OTP was sent
+    // Log email status but don't block user registration
     if (!emailService.isServiceConfigured()) {
       console.warn('⚠️  Email service not configured. User registered but verification email not sent.');
     } else if (!otpResult.success) {
-      console.error('❌ Failed to send verification email:', otpResult.message);
-      throw new BadRequestError('User registered but failed to send verification email. Please contact support.');
+      console.warn('⚠️  Failed to send verification email:', otpResult.message);
+      console.warn('User can resend verification email later.');
+    } else {
+      console.log('✅ Verification email sent successfully to:', email);
     }
 
     // Generate token
