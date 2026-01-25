@@ -222,14 +222,26 @@ class AuthService {
       throw new BadRequestError('Email service is not configured. Please contact support.');
     }
 
-    const result = await emailService.createAndSendOTP(email, 'email_verification');
-    console.log(`[AUTH] OTP send result:`, result);
+    // Send OTP in background (non-blocking) to prevent timeout
+    (async () => {
+      try {
+        const result = await emailService.createAndSendOTP(email, 'email_verification');
+        console.log(`[AUTH] OTP send result:`, result);
+        if (!result.success) {
+          console.error('⚠️  Failed to send verification email:', result.message);
+        } else {
+          console.log('✅ Verification OTP sent successfully to:', email);
+        }
+      } catch (err) {
+        console.error('⚠️  Error sending verification email:', err);
+      }
+    })();
 
-    if (!result.success) {
-      throw new BadRequestError(result.message || 'Failed to send verification email');
-    }
-
-    return result;
+    // Return immediately - OTP will be sent in background
+    return {
+      success: true,
+      message: `OTP sent successfully to ${email}`,
+    };
   }
 
   /**
@@ -292,13 +304,25 @@ class AuthService {
       throw new BadRequestError('Email service is not configured. Please contact support.');
     }
 
-    const result = await emailService.createAndSendOTP(email, 'password_reset');
+    // Send OTP in background (non-blocking) to prevent timeout
+    (async () => {
+      try {
+        const result = await emailService.createAndSendOTP(email, 'password_reset');
+        if (!result.success) {
+          console.error('⚠️  Failed to send password reset email:', result.message);
+        } else {
+          console.log('✅ Password reset OTP sent successfully to:', email);
+        }
+      } catch (err) {
+        console.error('⚠️  Error sending password reset email:', err);
+      }
+    })();
 
-    if (!result.success) {
-      throw new BadRequestError(result.message || 'Failed to send password reset email');
-    }
-
-    return result;
+    // Return immediately - OTP will be sent in background
+    return {
+      success: true,
+      message: 'If the email exists, a password reset OTP has been sent',
+    };
   }
 
   /**

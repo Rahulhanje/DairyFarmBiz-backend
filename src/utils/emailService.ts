@@ -19,6 +19,13 @@ class EmailService {
   private initialize() {
     const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, EMAIL_FROM } = process.env;
 
+    console.log('📧 Email Service Initialization:');
+    console.log('  - SMTP_HOST:', SMTP_HOST || '❌ NOT SET');
+    console.log('  - SMTP_PORT:', SMTP_PORT || '❌ NOT SET');
+    console.log('  - SMTP_USER:', SMTP_USER || '❌ NOT SET');
+    console.log('  - SMTP_PASS:', SMTP_PASS ? '✅ SET (hidden)' : '❌ NOT SET');
+    console.log('  - EMAIL_FROM:', EMAIL_FROM || SMTP_USER || '❌ NOT SET');
+
     if (!SMTP_HOST || !SMTP_PORT || !SMTP_USER || !SMTP_PASS) {
       console.warn('⚠️  Email service not configured. Email features will be disabled.');
       return;
@@ -35,8 +42,21 @@ class EmailService {
         },
       });
 
+      // Verify SMTP connection
+      this.transporter.verify((error, success) => {
+        if (error) {
+          console.error('❌ SMTP Connection Failed:', error.message);
+          console.error('   Full error:', error);
+          this.isConfigured = false;
+        } else {
+          console.log('✅ SMTP Connection Verified - Email service ready');
+          this.isConfigured = true;
+        }
+      });
+
+      // Temporarily mark as configured, will be updated by verify
       this.isConfigured = true;
-      console.log('✅ Email service configured successfully');
+      console.log('✅ Email transporter created, verifying connection...');
     } catch (error) {
       console.error('❌ Failed to configure email service:', error);
     }
@@ -73,7 +93,7 @@ class EmailService {
     try {
       // Normalize email to lowercase
       const normalizedEmail = email.toLowerCase().trim();
-      
+
       // Delete any existing OTPs for this email and purpose
       await OTP.deleteMany({ email: normalizedEmail, purpose });
 
