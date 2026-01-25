@@ -107,8 +107,16 @@ class BreedingService {
 
     // Automatically create EMAIL notification for pregnancy check
     try {
+      // Debug logging
+      console.log('📧 Creating notification with emails:');
+      console.log('   - data.userEmail:', data.userEmail);
+      console.log('   - config.notificationEmail:', config.notificationEmail);
+      console.log('   - config.smtpUser:', config.smtpUser);
+
       // Determine recipient email with proper fallback
       const recipientEmail = data.userEmail || config.notificationEmail || config.smtpUser;
+
+      console.log('   - Final recipientEmail:', recipientEmail);
 
       if (!recipientEmail) {
         console.error('⚠️  Cannot create email notification: No recipient email available');
