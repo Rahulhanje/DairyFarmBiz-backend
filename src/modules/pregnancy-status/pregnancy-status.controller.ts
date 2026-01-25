@@ -104,7 +104,7 @@ export const getStatistics = asyncHandler(async (req: AuthRequest, res: Response
  * @route   GET /api/v1/pregnancy-status/transitions/:status
  * @access  Private
  */
-export const getAvailableTransitions = asyncHandler(async (req: Request, res: Response) => {
+export const getAvailableTransitions = asyncHandler(async (req: AuthRequest, res: Response) => {
   const status = req.params.status as PregnancyStatus;
   const transitions = pregnancyStatusService.getAvailableTransitions(status);
   sendSuccess(res, { currentStatus: status, availableTransitions: transitions }, 'Available transitions fetched successfully');
